@@ -25,7 +25,6 @@ Client::Client(int sd, struct  sockaddr_in peer) {
 }
 void Client::processConnection(fd_set *rset) {
 	char buf[MAX_OUTGOING_REQUEST_SIZE + 1];
-	char type[128];
 	int len;
 	if(!FD_ISSET(sd,rset)) {
 		return;
@@ -390,8 +389,6 @@ char *Client::findServerValue(char *name,serverList list) {
 	return NULL;
 }
 void Client::addServerBuff(char **buff,int *len, serverList slist) {
-	peerchatMsgData peerchatMsg;
-	msgNumUsersOnChan *numUsersMsg;
 	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
 	char *fdata;
 	int i=0;
@@ -466,8 +463,6 @@ void Client::sendServers() {
 	uint8_t *p;
 	uint16_t num_params = 0;
 	uint32_t len = 0;
-	MYSQL_RES *res;
-	MYSQL_ROW row;
 	char field[MAX_FIELD_LIST_LEN + 1];
 	int fi = 0;
 	bool sendPacket = false;

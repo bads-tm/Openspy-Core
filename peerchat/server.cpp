@@ -334,8 +334,6 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 	char data[128];
 	char *nick, *host;
 	int pid = 0;
-	MYSQL_RES *res;
-	MYSQL_ROW row;
 	userMode *usermode = (userMode *)malloc(sizeof(userMode));
 	if(usermode == NULL) return;
 	memset(usermode,0,sizeof(userMode));
@@ -883,8 +881,6 @@ void addChanProp(Client *setter, char *target, char *modestr) {
 	int pid;
 	chanProps *props;
 	bool newProp = false;
-	MYSQL_RES *res;
-	MYSQL_ROW row;
 	props = findChanProp(target);
 	if(props == NULL) {
 		if(~setter->getRights() & OPERPRIVS_GLOBALOWNER) {

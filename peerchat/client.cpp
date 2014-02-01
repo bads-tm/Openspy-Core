@@ -90,7 +90,7 @@ bool Client::cmd_user(char *params) {
 	 return false;
  }
  bool Client::cmd_setrights(char *params) {
-	char *p,*target;
+	char *p;
 	Client *targetuser;
 	if(params==NULL) {
 		goto notenoughparams;
@@ -227,7 +227,6 @@ bool Client::cmd_who(char *params) {
 	char *p;
 	Channel *targetchan;
 	Client *targetuser;
-	bool seeip;
 	std::list<chanClient *> chanList;
 	std::list<chanClient *>::iterator it;
 	char statbuff[12];
@@ -914,8 +913,6 @@ end:
 	 return false;
 }
 bool Client::cmd_setusermode(char *params) {
-	char data[128];
-	Channel *chan;
 	char *setstr;
 	if(params == NULL) goto notenoughparams;
 	setstr = strchr(params,' ');
@@ -1163,8 +1160,6 @@ bool Client::cmd_kline(char *params) {
 	return false;
 }
 bool Client::cmd_setchanprops(char *params) {
-	char data[128];
-	Channel *chan;
 	char *setstr;
 	if(params == NULL) goto notenoughparams;
 	setstr = strchr(params,' ');
@@ -1303,7 +1298,6 @@ bool Client::cmd_whowas(char *params) {
 	}
 	send_numeric(369,"%s :End of WHOWAS",params);
 	return true;
-	notenoughparams:
 	send_numeric(461,"WHOWAS :Not enough parameters");
 	return false;
 }
@@ -1683,7 +1677,6 @@ bool Client::cmd_kick(char *params) {
 			return false;
 		}
 	}
-	char kickmsg[256];
 	if(reason == NULL) {
 		chan->sendMessage(userprivs->invisible,false,this,"KICK %s %s",chan->getName(),target->nick);
 	} else {
@@ -1696,8 +1689,6 @@ bool Client::cmd_kick(char *params) {
 	return false;
 }
 bool Client::cmd_oper(char *params) {
-	MYSQL_RES *res;
-	MYSQL_ROW row;
 	char *email,*pass,*sendnoticetxt;
 	char *query;
 	int len;
@@ -1738,13 +1729,11 @@ bool Client::cmd_oper(char *params) {
 }
 bool Client::cmd_login(char *params) {
 //LOGIN 1 * c8837b23ff8aaa8a2dde915473ce0991 :CHCNiZ@chcniz@gmail.com
-	MYSQL_RES *res;
-	MYSQL_ROW row;
 	int type;
 	char *name,*pass,*loginstr;
 	char *query = NULL;
 	int len;
-	char *email,*uniquenick;
+	char *email;
 	if(params == NULL) goto notenoughparams;
 	name = strchr(params, ' ');//idk what the parameter is for
 	if(name == NULL) goto notenoughparams;

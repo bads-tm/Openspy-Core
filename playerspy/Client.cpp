@@ -166,7 +166,6 @@ void Client::handleLogin(char *buff, int len) {
 	memset(&lt,0,sizeof(lt));
 	gen_random(lt,22);
 	strcat(lt,"__");
-	char suniquenick[GP_NICK_LEN];
 	formatSend(sd,true,0,"\\lc\\2\\sesskey\\%d\\proof\\%s\\userid\\%d\\profileid\\%d\\uniquenick\\%s\\lt\\%s\\id\\1",sesskey,gs_login_proof((unsigned char *)&pass,(unsigned char *)proofuser,(unsigned char *)&challenge,(unsigned char *)&this->challenge),userid,profileid,uniquenick,lt);	
 	loadBuddies();
 	loadBlockedList();
@@ -464,7 +463,6 @@ void Client::handleBM(char *buff, int len) {
 	int type = find_paramint(1,buff);
 	int to = find_paramint("t",buff);
 	char buffer[2048];
-	char query[2048 + 512];
 	Client *target = getProfile(to);
 	if(target != NULL) {
 		if(target->hasBlocked(this)) {
@@ -621,7 +619,6 @@ end:
 	
 }
 void Client::handleRevoke(char *buff, int len) {
-	MYSQL_ROW row;
 	char query[256];
 	int pid = find_paramint("profileid",buff);
 	sprintf_s(query,sizeof(query),"SELECT 1 FROM `Presence`.`buddies` WHERE `profileid` = '%d' AND `targetid` = '%d'",pid,profileid);
@@ -897,7 +894,6 @@ void Client::parseIncoming() {
 }
 void Client::parseIncoming(char *buff, int len) {
 	char type[128];
-	char *next;
 	if(!find_param(0, buff, type,sizeof(type))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		return;	
