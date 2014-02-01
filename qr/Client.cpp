@@ -207,20 +207,25 @@ void Client::handleHeartbeat(char *buff, int len) {
 				x = BufferReadNTS((uint8_t **)&buff,(uint32_t *)&len);	
 				//BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte
 				indexedKey *key = (indexedKey *)malloc(sizeof(indexedKey));
+				
+				if(key == NULL) {
+					printf("Unable to allocate memory!");
+					exit(-1);
+				}
+
 				char *value = NULL;
-				if(key != NULL) {
-					char *name = (char *)nameValueList.at(i);
-					if(name != NULL) {
-					is_team = isTeamString((char *)name);
-					value = (char *)x;
-					key->key.name = (char *)calloc(strlen(name) +1,1);
-					strcpy(key->key.name,name);
-					} else key->key.name = NULL;
-					if(value != NULL) {
-						key->key.value = (char *)calloc(strlen(value)+1,1);
-						strcpy(key->key.value,value);
-					} else key->key.value = NULL;
-					key->index = player;
+				char *name = (char *)nameValueList.at(i);
+				if(name != NULL) {
+				is_team = isTeamString((char *)name);
+				value = (char *)x;
+				key->key.name = (char *)calloc(strlen(name) +1,1);
+				strcpy(key->key.name,name);
+				} else key->key.name = NULL;
+				if(value != NULL) {
+					key->key.value = (char *)calloc(strlen(value)+1,1);
+					strcpy(key->key.value,value);
+				} else key->key.value = NULL;
+				key->index = player;
 				}
 				if(is_team) {
 					teamKeys.push_back(key);
