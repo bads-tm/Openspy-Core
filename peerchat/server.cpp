@@ -384,6 +384,7 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 	if(setter != NULL && ~setter->getRights() & OPERPRIVS_GLOBALOWNER) {
 		Channel *chan = find_chan(target);
 		if(chan == NULL) {
+			free((void *)usermode);
 			setter->send_numeric(403, "%s %s :No such channel",nick,target);
 			return;
 		}
