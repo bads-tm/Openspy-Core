@@ -795,11 +795,11 @@ void Client::handleInviteTo(char *buff, int len) {
 	}
 	inviteableProducts.clear();
 	if(strchr(products,'\\') != NULL) {
-	pch = strtok(",",products);
+	pch = strtok(products, ",");
 		while(pch != NULL) {
 			product = atoi(pch);
 			inviteableProducts.push_front(product);
-			pch = strtok(",", NULL);
+			pch = strtok(NULL, ",");
 		}
 	} else {
 		product = atoi(products);
