@@ -59,15 +59,21 @@ char *Channel::getName() {
 }
 void Channel::addUser(chanClient *user) {
 	chanClient *chan_client=(chanClient *)malloc(sizeof(chanClient));
-	char *unick;
-	if(user == NULL) return;
-	if(user->client == NULL) return;
-	if(chan_client == NULL) {
-		if(user->client != NULL) {
-			user->client->send_numeric(473,"%s :Cannot join channel (Failed to allocate memory for chanClient)",getName());
-		}
-		return;
+
+	if(chanClient == NULL) {
+		fprint(stderr, "Unable to allocate memory for channel client");
+		exit(1);
 	}
+	
+	char *unick;
+	if(user == NULL) {
+		free((void *)chan_client);
+		return
+	};
+	if(user->client == NULL) {
+		free((void *)chan_client);
+		return;
+	};
 	user_list.push_back(chan_client);
 	user->client->getUserInfo(&unick,NULL,NULL,NULL);
 	memcpy(chan_client,user,sizeof(chanClient));
