@@ -115,9 +115,7 @@ void Client::setData(char *variable, char *value) {
 	}
 	if(key->name == NULL) {
 		key->name = (char *)calloc(strlen(variable)+1,1);
-		if(key->name != NULL) {
-			strcpy(key->name,variable);
-		}
+		strcpy(key->name,variable);
 	}
 	if(key->value != NULL) {
 		free((void *)key->value);
@@ -409,7 +407,6 @@ std::list<customKey *> Client::getRules() {
 	indexedKey *ikey;
 	while(iterator != serverKeys.end()) {
 		key = *iterator;
-		if(key == NULL || key->name == NULL || key->value == NULL) continue;
 		key2 = (customKey *)malloc(sizeof(customKey));
 		key2->name = (char *)calloc(strlen(key->name)+1,1);
 		strcpy(key2->name,key->name);
@@ -422,7 +419,6 @@ std::list<customKey *> Client::getRules() {
 	while(it2 != playerKeys.end()) {
 		ikey = *it2;
 		key = (customKey *)malloc(sizeof(customKey));
-		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) continue;
 		key->name = (char *)calloc(strlen(ikey->key.name)+32,1);
 		key->value = (char *)calloc(strlen(ikey->key.value)+32,1);
 		sprintf(key->name,"%s%d",ikey->key.name,ikey->index);

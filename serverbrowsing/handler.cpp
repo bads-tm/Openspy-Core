@@ -185,7 +185,10 @@ void addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) {
 		} else if(strcasecmp(field,"numplayers") == 0) { //TODO: make this the amount of IRC users from peerchat
 			peerchatMsg.msgid = (char)EMsgID_NumUsersOnChan;
 			numUsersMsg = (msgNumUsersOnChan *)malloc(sizeof(msgNumUsersOnChan));
-			if(numUsersMsg == NULL) continue;
+			if(numUsersMsg == NULL) {
+				fprint(stderr, "Unable to allocate memory");
+				exit(1);
+			}
 			peerchatMsg.data = (void *)numUsersMsg;
 			memset(numUsersMsg,0,sizeof(msgNumUsersOnChan));
 			sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%u",atoi(row[0]));
