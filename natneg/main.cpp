@@ -88,6 +88,8 @@ void *openspy_mod_run(modLoadOptions *options)
   for(int i=0;i<num_instances;i++) {
 	if((sockets[i] = socket(AF_INET,SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		servoptions.logMessageProc(moduleInfo.name,LOGLEVEL_ERROR,"Error creating socket for instance %d\n",i+1);
+		free((void *)sockets);
+		free((void *)si_me);
 		return NULL;
 	}
 	si_me[i].sin_family = AF_INET;
