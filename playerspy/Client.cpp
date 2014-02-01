@@ -45,7 +45,13 @@ end:
 	 deleteClient(this);
 }
 void Client::sendError(int sd, bool fatal, char *msg, GPErrorCode errid, int id) {
-	int len = 128 + strlen(msg);
+	size_t msglen = 0;
+	
+	if(msg != NULL) {
+		msglen = strlen(msg);
+	}
+	
+	size_t len = 128 + msglen;
 	char *errtext = (char *)malloc(len);
 	sprintf_s(errtext,len,"\\error\\\\err\\%d",errid);
 	if(fatal) {
