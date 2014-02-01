@@ -1277,6 +1277,7 @@ bool Client::cmd_listchans(char *params) {
 	return true;
 }
 bool Client::cmd_whowas(char *params) {
+	if(params == NULL) goto notenoughparams;
 	int i=0;
 	std::list<whowasInfo *>::iterator iterator = server.whowas_list.begin();
 	whowasInfo *info;
