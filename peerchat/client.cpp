@@ -1499,6 +1499,7 @@ bool Client::cmd_getckey(char *params) {
 	chan = find_chan(params);
 	if(chan == NULL) {
 		//peerchat doesn't give an error for this so we don't either
+		free((void *)querycp);
 		return false;
 	}
 	client = NULL;
@@ -1508,11 +1509,13 @@ bool Client::cmd_getckey(char *params) {
 		if(targetuser == NULL) {
 			//s 401 Shinto Shinto :No such nick/channel
 			send_numeric(401,"%s :No such nick/channel",target);
+			free((void *)querycp);
 			return false;
 		}
 		client = chan->getUserInfo(targetuser);
 		if(client == NULL || (client->invisible && client->client->getRights() & OPERPRIVS_INVISIBLE && ~getRights() & OPERPRIVS_INVISIBLE)) {
 			send_numeric(401,"%s :No such nick/channel",target);
+			free((void *)querycp);
 			return false;
 		}
 	}
@@ -1566,6 +1569,9 @@ bool Client::cmd_getckey(char *params) {
 		it++;
 		}
 	}
+
+	free((void *)querycp);
+
 	if(numsent > 0)
 		send_numeric(703,"%s %s :End of GETCKEY",chan->getName(),cookie);
 	return true;
