@@ -335,7 +335,12 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 	char *nick, *host;
 	int pid = 0;
 	userMode *usermode = (userMode *)malloc(sizeof(userMode));
-	if(usermode == NULL) return;
+	
+	if(usermode == NULL) {
+		fprintf(stderr, "Unable to allocate memory");
+		exit(1);
+	}
+
 	memset(usermode,0,sizeof(userMode));
 	usermode->isGlobal = true;
 	if(find_param("hostmask", modestr, data, MAX_NAME)) {
@@ -386,32 +391,39 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 		if(cClient == NULL) {
 			//:s 442 CHC #gsp!subhome :You're not on that channel
 			setter->send_numeric(442, "%s %s :You're not on that channel",nick,target);
+			free((void *)usermode);
 			return;
 		}
 		if(chan->onlyowner) {
 			if(!cClient->owner) {
 				chan->sendNotEnoughPrivs(ENotEnough_OWNER,setter,"Setting ops");
+				free((void *)usermode);
 				return;
 			}
 		}
 		if(usermode->modeflags & EModeFlags_Op && !cClient->owner) {
 			chan->sendNotEnoughPrivs(ENotEnough_OWNER,setter,"Setting ops");
+			free((void *)usermode);
 			return;
 		}
 		if(usermode->modeflags & EModeFlags_HalfOp && !cClient->op && !cClient->owner) {
 			chan->sendNotEnoughPrivs(ENotEnough_OP,setter,"Setting Halfops");
+			free((void *)usermode);
 			return;
 		}
 		if(usermode->modeflags & EModeFlags_Op && !cClient->op && !cClient->owner) {
 			chan->sendNotEnoughPrivs(ENotEnough_OP,setter,"Setting ops");
+			free((void *)usermode);
 			return;
 		}
 		if(usermode->modeflags & EModeFlags_Voice && !cClient->op && !cClient->owner && !cClient->halfop) {
 			chan->sendNotEnoughPrivs(ENotEnough_HALFOP,setter,"Setting voice");
+			free((void *)usermode);
 			return;
 		}
 		if(cClient->halfop == false && cClient->op == false && cClient->owner == false) {
 			chan->sendNotEnoughPrivs(ENotEnough_HALFOP,setter,"Setting modes");
+			free((void *)usermode);
 			return;
 		}
 		if(chan->registered) {
