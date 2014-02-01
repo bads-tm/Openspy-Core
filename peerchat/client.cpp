@@ -406,10 +406,6 @@ bool Client::joinChan(char *name, chanClient *userInfo, char *key) { //specific 
 			sprintf(modestr,"\\hostmask\\%s\\modeflags\\o\\isGlobal\\0\\comment\\AllOps Channel",host);
 			addUserMode(NULL,name,modestr,true);
 	}
-	if(chan == NULL) {
-		send_numeric(473,"%s :Cannot join channel (Failed to allocate channel)",name);
-		return false;
-	}
 	if(chan->inviteonly) {
 		if(userInfo->invited != true && userInfo->op != true && userInfo->owner != true) {
 			if(createdChan == true) {
@@ -1150,6 +1146,8 @@ bool Client::cmd_kline(char *params) {
 		if(*host == ':') {
 			host++;
 		}
+	} else {
+		goto notenoughparams;
 	}
 	char setstr[128];
 	sprintf(setstr,"\\hostmask\\%s\\modeflags\\b\\comment\\Killed\\expiressec\\600",host);
