@@ -10,7 +10,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	memset(&sbuff,0,sizeof(sbuff));
 	game = NULL;
 	this->sd = sd;
-	memcpy(&sockinfo,&peer,sizeof(struct sockaddr_in));
+	memcpy(&sockinfo,peer,sizeof(struct sockaddr_in));
 	gen_random((char *)&challenge,6);
 	enctype = 0;
 	lastPing = time(NULL);
