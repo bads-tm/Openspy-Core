@@ -47,7 +47,7 @@ time_t Client::getConnectTime() {
 	return connected;
 }
 void Client::processConnection(fd_set *rset) {
-	char buf[MAX_OUTGOING_REQUEST_SIZE + 1];
+	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = {0};
 	char type[128];
 	int len;
 	if(!FD_ISSET(sd,rset)) {
