@@ -1,6 +1,7 @@
 #include "Client.h"
 #include "server.h"
 #include <common/enctype_shared.h>
+#include <cstddef>
 extern MYSQL *conn;
 Client::Client(int sd, struct sockaddr_in *peer) {
 	char sbuff[256];
@@ -277,9 +278,11 @@ void Client::senddata(char *buff, int len, bool sendFinal, bool initPacket, bool
 		sbuffp = sendbuff;
 	} else if(len > (sbuffalloclen-128) || ((sendbuff - sbuffp)+len > (sbuffalloclen-128))) {
 		char *sptr = sbuffp;
+		ptrdiff_t dptr = sendbuff - sbuffp;
 		sbuffp = (char *)realloc(sbuffp,sbuffalloclen+len+1024);
 		if(sbuffp != NULL) {
 			sbuffalloclen += len+1024;
+			sendbuff = sbuffp + dptr;
 		} else sbuffp = sptr;
 	}
 	if(buff != NULL)
