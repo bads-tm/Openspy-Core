@@ -137,6 +137,10 @@ void Client::handleValidation(uint8_t *buff,uint32_t len) {
 	} 
 	find_param("gamename",(char *)buff, (char *)&gamename,sizeof(gamename));
 	game = servoptions.gameInfoNameProc((char *)gamename);
+	if (game == NULL) {
+		deleteClient(this);
+		return;
+	}
 	find_param("validate",(char *)buff,(char *)&validation,sizeof(validation));
 	gsseckey((unsigned char *)&realvalidate, (unsigned char *)&challenge, (unsigned char *)game->secretkey, enctype);
 	if(strcmp(realvalidate,validation) == 0 && game != NULL && game->servicesdisabled == 0) {
