@@ -482,15 +482,12 @@ uint32_t Client::getAddress() {
 	return sockinfo.sin_addr.s_addr;
 }
 uint32_t Client::getServerAddress() {
-/*
 	uint32_t retip;
 	char *ipstr = findServerValue("publicip");
 	if(ipstr != NULL) {
-		retip = atoi(ipstr);
-		retip = htonl(retip);
+		retip = inet_addr(ipstr);
 		return retip;
 	}
-*/
 	return sockinfo.sin_addr.s_addr;
 }
 uint32_t Client::getServerPort() {
