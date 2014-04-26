@@ -432,6 +432,7 @@ void Client::addServerBuff(char **buff,int *len, serverList slist) {
 	}
 	*/
 	if(fieldlist != NULL) flags |= HAS_KEYS_FLAG;
+	flags |= UNSOLICITED_UDP_FLAG;
 	BufferWriteByte((uint8_t **)buff,(uint32_t *)len,flags);
 	BufferWriteInt((uint8_t **)buff,(uint32_t *)len,slist.ipaddr);
 	if(flags & NONSTANDARD_PORT_FLAG) {
