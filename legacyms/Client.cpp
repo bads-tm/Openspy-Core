@@ -24,7 +24,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	senddata((char *)&sbuff,slen,false,true,true,true);
 }
 Client::~Client() {
-	senddata(NULL, 0, true, false, false, true ); //flush remaining data
+	senddata(NULL, 0, true, false, !validated, true ); //flush remaining data
 	free((void *)sbuffp);
 	close(sd);
 }
