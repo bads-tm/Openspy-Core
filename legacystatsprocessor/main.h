@@ -17,7 +17,6 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <sys/times.h>
-#include <stropts.h>
 #endif
 #include <fcntl.h>
 #include <ctype.h>

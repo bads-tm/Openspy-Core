@@ -18,7 +18,6 @@ typedef int socklen_t;
 #include <netdb.h>
 #include <pthread.h>
 #include <sys/times.h>
-#include <stropts.h>
 #define stricmp strcasecmp
 #define sprintf_s snprintf
 #define strnicmp strncasecmp

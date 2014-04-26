@@ -21,7 +21,6 @@
     #include <sys/times.h>
     #include <fcntl.h>
     #include <ctype.h>
-    #include <stropts.h>
 #endif
 #include <openspy/structs.h>
 #include <common/helpers.h>
