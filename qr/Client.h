@@ -11,7 +11,7 @@
 #define PACKET_PREQUERY_IP_VERIFY 0x09 //S -> C
 #define PACKET_AVAILABLE          0x09 //C -> S
 #define PACKET_CLIENT_REGISTERED  0x0A //S -> C
-#define QR_PING_TIME 120
+#define QR_PING_TIME 660
 #define CHALLENGE_LEN 20
 class Client {
 	public:
