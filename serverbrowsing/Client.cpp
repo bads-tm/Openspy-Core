@@ -411,9 +411,11 @@ void Client::addServerBuff(char **buff,int *len, serverList slist) {
 			privip = addr;
 		}
 	}
+	/*
 	if((fdata = findServerValue("hostport",slist)) != NULL) {
 		hostport = htons(atoi(fdata));
 	}
+	*/
 	if((fdata = findServerValue("localport",slist)) != NULL) {
 		localport = htons(atoi(fdata));
 		if(localport != htons(queryGame->queryport)) {
