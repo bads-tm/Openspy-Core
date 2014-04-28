@@ -242,7 +242,8 @@ void Client::handleNewUser(char *buff, int len) {
 	}
 	if(!find_param("password", buff, pass, sizeof(pass))) {
 		//todo: add passenc
-		if(!find_param("passenc",buff,pass,sizeof(pass))) {
+		if((!find_param("passenc",buff,pass,sizeof(pass)))
+		&& (!find_param("passwordenc",buff,pass,sizeof(pass)))) {
 			sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		       return;	
 		} else {
