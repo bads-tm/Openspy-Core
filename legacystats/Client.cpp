@@ -35,7 +35,7 @@ void Client::mainLoop(fd_set *rset) {
 	len = recv(sd,buff,sizeof(buff),0);
 	if(len<1) goto end;
 	lastPacket = time(NULL);
-	if(!do_db_check()) return
+	if(!do_db_check()) return;
 	gamespy3dxor(buff, len);
 	buff[len]=0;
 	makeStringSafe((char *)&buff, sizeof(buff));
