@@ -234,14 +234,13 @@ void Client::sendBuddies() {
 	}
 }
 void Client::handleNewUser(char *buff, int len) {
-	//TODO: register a user if not registered
 	char uniquenick[GP_NICK_LEN+1],nick[GP_NICK_LEN+1],email[GP_EMAIL_LEN+1],pass[GP_PASSWORD_LEN+1],cdkey[GP_CDKEY_LEN+1];
+	int id = find_paramint("id",buff);
 	if(!find_param("email", buff, email, sizeof(email))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		return;
 	}
 	if(!find_param("password", buff, pass, sizeof(pass))) {
-		//todo: add passenc
 		if((!find_param("passenc",buff,pass,sizeof(pass)))
 		&& (!find_param("passwordenc",buff,pass,sizeof(pass)))) {
 			sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
@@ -279,6 +278,7 @@ void Client::handleNewUser(char *buff, int len) {
 	if(userid == 0) {
 		userid = registerUser(server.conn,email,pass);
 		profileid = makeNewProfile(server.conn,nick,userid);
+		if (id) formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d\\id\\%d",userid,profileid,id); else
 		formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d",userid,profileid);
 		return;
 	}
@@ -314,6 +314,7 @@ void Client::handleNewUser(char *buff, int len) {
 			if(cdkey[0] != 0) {
 				addAuthCdKey(server.conn,profileid, cdkey,game);
 			}
+			if (id) formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d\\id\\%d",userid,profileid,id); else
 			formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d",userid,profileid);
 			return;
 		}
