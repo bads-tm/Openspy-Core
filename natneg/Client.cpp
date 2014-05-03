@@ -80,7 +80,9 @@ void Client::handleAddressCheck(NatNegPacket *packet) {
 	sendto(sd,(char *)packet,INITPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
 }
 void Client::SendConnectPacket(Client *user, bool sendToOther) {
-	NatNegPacket sendpacket;
+	NatNegPacket sendpacket = {0};
+	sendpacket.version = version;
+	sendpacket.Packet.Connect.gotyourdata = true;
 	sendpacket.packettype = NN_CONNECT;
 	sendpacket.cookie = cookie;
 	memcpy(sendpacket.magic, NNMagicData, NATNEG_MAGIC_LEN);
@@ -138,6 +140,7 @@ void Client::sendDeadBeatNotice() {
 	if(instance != 1) return;
 	connected = true;
 	memset(&sendpacket,0,sizeof(NatNegPacket));
+	sendpacket.version = version;
 	sendpacket.packettype = NN_CONNECT;
 	sendpacket.cookie = cookie;
 	memcpy(sendpacket.magic, NNMagicData, NATNEG_MAGIC_LEN);
