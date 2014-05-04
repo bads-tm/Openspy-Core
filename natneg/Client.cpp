@@ -64,9 +64,9 @@ void Client::handleInitPacket(NatNegPacket *packet) {
 }
 void Client::trySendConnect(bool sendToOther) {
 	Client *c;
-	if(!gotConnectAck) {
+	if(!gotConnectAck && cindex==1) {
 		//TODO: find user by cookie and game
-		if((c = find_user_by_cookie_index(cookie, instance,cindex==1?0:1)) != NULL) {
+		if((c = find_user_by_cookie_index(cookie, instance,0)) != NULL) {
 			if(c != this) {
 				SendConnectPacket(c,sendToOther);
 			}
@@ -82,7 +82,7 @@ void Client::handleAddressCheck(NatNegPacket *packet) {
 void Client::SendConnectPacket(Client *user, bool sendToOther) {
 	NatNegPacket sendpacket = {0};
 	sendpacket.version = version;
-	sendpacket.Packet.Connect.gotyourdata = true;
+	sendpacket.Packet.Connect.gotyourdata = 'B';
 	sendpacket.packettype = NN_CONNECT;
 	sendpacket.cookie = cookie;
 	memcpy(sendpacket.magic, NNMagicData, NATNEG_MAGIC_LEN);
