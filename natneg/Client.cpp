@@ -59,14 +59,19 @@ void Client::handleInitPacket(NatNegPacket *packet) {
 	cindex = packet->Packet.Init.clientindex;
 	packet->packettype = NN_INITACK;
 	sendto(sd,(char *)packet,INITPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
+	if (packet->Packet.Init.porttype) {
+		//TODO: port guessing
+		deleteClient(this);
+		return;
+	}
 	gotInit = true;
 	trySendConnect();
 }
 void Client::trySendConnect(bool sendToOther) {
 	Client *c;
-	if(!gotConnectAck && cindex==1) {
+	if(!gotConnectAck) {
 		//TODO: find user by cookie and game
-		if((c = find_user_by_cookie_index(cookie, instance,0)) != NULL) {
+		if((c = find_user_by_cookie_index(cookie, instance,cindex==1?0:1)) != NULL) {
 			if(c != this) {
 				SendConnectPacket(c,sendToOther);
 			}
