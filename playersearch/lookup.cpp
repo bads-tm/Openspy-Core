@@ -157,7 +157,17 @@ void newUser(int sd, char *buff) {
 	}
 	mysql_real_escape_string(conn,pass,pass,strlen(pass));
 	userid = getUserIDFromEmail(conn,email);
-	if(userid == 0 || !tryPassword(conn,userid,pass)) {
+	if(userid == 0) {
+		userid = registerUser(conn,email,pass);
+		if(uniquenick[0] != 0) {
+			profileid = makeNewProfileWithUniquenick(conn,nick,uniquenick,userid);
+		} else {
+			profileid = makeNewProfile(conn,nick,userid);
+		}
+		formatSend(sd,true,0,"\\nur\\0\\pid\\%d",profileid);
+		return;
+	}
+	if(!tryPassword(conn,userid,pass)) {
 		formatSend(sd,true,0,"\\nur\\%d",GP_NEWUSER_BAD_PASSWORD);
 		return;
 	}
@@ -333,6 +343,21 @@ void searchUsers(int sd, char *buff) {
 	end:
 	mysql_free_result(res);
 	free((void *)query);
+}
+void uniqueSearch(int sd, char *buff) {
+	char preferrednick[GP_NICK_LEN];
+	if(!find_param("preferrednick", buff, preferrednick, sizeof(preferrednick))) {
+		sendError(sd,"Error recieving request");
+		return;	
+	}
+	makeValid(preferrednick);
+	std::string sendmsg = "\\us\\7";
+	for (char i = 0; i < 7; ++i) {
+		sendmsg += "\\nick\\";
+		sendmsg += preferrednick;
+	}
+	sendmsg += "\\usdone\\";
+	formatSend(sd,true,0,"%s",sendmsg.c_str());
 }
 void sendReverseBuddies(int sd,char *msg) {
 	int len = 1024;

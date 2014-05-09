@@ -68,6 +68,7 @@ void *processConnection(threadOptions *options) {
 		sendReverseBuddies(sd,buf);
 	} else if(stricmp(type,"otherslist") == 0) {
 	} else if(stricmp(type,"uniquesearch") == 0) { //nameinator
+		uniqueSearch(sd,buf);
 	} else if(stricmp(type,"profilelist") == 0) { //nameinator
 	}else {
 		sendError(sd,"Error recieving request");	

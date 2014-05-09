@@ -10,5 +10,6 @@ void sendNicks(int sd, char *buff);
 void checkNick(int sd, char *buff);
 void newUser(int sd, char *buff);
 void searchUsers(int sd, char *buff);
+void uniqueSearch(int sd, char *buff);
 void sendReverseBuddies(int sd,char *msg);
 #endif

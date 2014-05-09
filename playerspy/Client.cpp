@@ -137,6 +137,12 @@ void Client::handleLogin(char *buff, int len) {
 		if(email == NULL) {
 			sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 			return;
+		} else {
+			char* e = email;
+			while (strchr(e+1,'@')) {
+				email = e;
+				e = strchr(e+1,'@');
+			}
 		}
 		*email++=0;
 		strncpy(this->email,email,strlen(email)%sizeof(this->email));
