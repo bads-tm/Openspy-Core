@@ -399,7 +399,11 @@ void Client::addServerBuff(char **buff,int *len, serverList slist) {
 	if((fdata = findServerValue("natneg",slist)) != NULL) {
 		if(atoi(fdata) != 0) {
 			flags |= CONNECT_NEGOTIATE_FLAG; //not really used in the sdk it seems though
+		} else {
+			flags |= UNSOLICITED_UDP_FLAG;
 		}
+	} else {
+		flags |= UNSOLICITED_UDP_FLAG;
 	}
 	uint32_t privip = 0;
 	uint16_t hostport = slist.port;
