@@ -159,13 +159,6 @@ void newUser(int sd, char *buff) {
 	userid = getUserIDFromEmail(conn,email);
 	if(userid == 0) {
 		userid = registerUser(conn,email,pass);
-		if(uniquenick[0] != 0) {
-			profileid = makeNewProfileWithUniquenick(conn,nick,uniquenick,userid);
-		} else {
-			profileid = makeNewProfile(conn,nick,userid);
-		}
-		formatSend(sd,true,0,"\\nur\\0\\pid\\%d",profileid);
-		return;
 	}
 	if(!tryPassword(conn,userid,pass)) {
 		formatSend(sd,true,0,"\\nur\\%d",GP_NEWUSER_BAD_PASSWORD);
