@@ -55,26 +55,27 @@ void Client::handleReport(NatNegPacket *packet) {
 	sendto(sd,(char *)packet,REPORTPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
 }
 void Client::handleInitPacket(NatNegPacket *packet) {
-	if (packet->Packet.Init.porttype) {
+	version = packet->version;
+	if ((version>1) && (packet->Packet.Init.porttype==1)) {
 		Client *c;
 		if((c = find_user_by_cookie_index(packet->cookie, instance, packet->Packet.Init.clientindex)) != NULL) {
 			if(c != this) {
-				c->sockinfo.sin_port = sockinfo.sin_port;
+				punching.sin_port = c->punching.sin_port;
+				deleteClient(c);
 			}
 		}
 	}
-	version = packet->version;
 	cookie = packet->cookie;
 	cindex = packet->Packet.Init.clientindex;
 	packet->packettype = NN_INITACK;
 	sendto(sd,(char *)packet,INITPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
-	if (packet->Packet.Init.porttype) {
+	if (packet->Packet.Init.porttype>1) {
 		//TODO: port guessing
 		deleteClient(this);
 		return;
 	}
 	gotInit = true;
-	trySendConnect();
+	if ((version<2) || (packet->Packet.Init.porttype==1)) trySendConnect();
 }
 void Client::trySendConnect(bool sendToOther) {
 	Client *c;
