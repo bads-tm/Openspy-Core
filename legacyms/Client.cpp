@@ -177,6 +177,8 @@ void Client::handleList(uint8_t *buff,uint32_t len) {
 		sendGroups(queryGame);
 	} else if(strcmp("info2", type) == 0) {
 		//TODO
+	} else {
+		sendServers(queryGame,hasFilter==true?((char *)&filter):NULL,true);
 	}
 	deleteClient(this);//appearently the server immidently terminates the connection
 }
@@ -239,9 +241,10 @@ void Client::sendGroups(gameInfo *queryGame) {
 	mysql_free_result(res);
 	
 }
-void Client::sendServers(gameInfo *queryGame, char *filter) {
+void Client::sendServers(gameInfo *queryGame, char *filter, bool basic) {
 	char sbuff[sizeof(uint32_t) + sizeof(uint16_t)];
 	char *buff = (char *)(&sbuff);
+	char bbuff[32];
 	int len = 0; //required for bufferwrite stuff
 	qrServerMsg msg;
 	qrServerList listData;
@@ -252,8 +255,19 @@ void Client::sendServers(gameInfo *queryGame, char *filter) {
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
 	serverList slist;
+	if (basic) {
+		len = sprintf_s(bbuff,sizeof(bbuff),"\\basic\\");
+		senddata((char *)&bbuff,len,false,false);
+	}
 	while(iterator != listData.server_list.end()) {
 		slist = *iterator;
+		if (basic) {
+			len = sprintf_s(bbuff,sizeof(bbuff),"\\ip\\%s:%d",inet_ntoa((struct in_addr){slist.ipaddr}),ntohs(slist.port));
+			senddata((char *)&bbuff,len,false,false);
+			freeServerRuleList(slist.serverKeys);
+			iterator++;
+			continue;
+		}
 		BufferWriteInt((uint8_t **)&buff,(uint32_t *)&len,slist.ipaddr);
 		BufferWriteShort((uint8_t **)&buff,(uint32_t *)&len,slist.port);
 		freeServerRuleList(slist.serverKeys);
