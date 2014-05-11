@@ -245,6 +245,7 @@ void *openspy_mod_run(modLoadOptions *options)
 	socklen_t psz;
 #endif
 	u_long on_a=1;
+	unsigned int db_timeout = 10;
 	struct  sockaddr_in peer;
 	int sdl,sdq;
 	fd_set  rset;
@@ -256,6 +257,7 @@ void *openspy_mod_run(modLoadOptions *options)
     peer.sin_family      = AF_INET;
     server.conn = mysql_init(NULL);
     mysql_options(server.conn,MYSQL_OPT_RECONNECT, (char *)&on_a);
+    mysql_options(server.conn,MYSQL_OPT_READ_TIMEOUT, &db_timeout);
    /* Connect to database */
 
 
