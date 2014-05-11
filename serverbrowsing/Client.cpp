@@ -530,7 +530,7 @@ void Client::setupCryptHeader(uint8_t **dst, uint32_t *len) {
 	for(uint32_t i=0;i<cryptlen;i++) {
 		cryptchal[i] = (uint8_t)rand();		
 	}
-	*backendflags = queryGame->backendflags;
+	*backendflags = htons(queryGame->backendflags);
 	for(uint32_t i=0;i<servchallen;i++) {
 		servchal[i] = (uint8_t)rand();		
 	}
