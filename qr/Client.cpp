@@ -465,7 +465,7 @@ gameInfo *Client::getGameInfo() {
 	return game;
 }
 uint16_t Client::getPort() {
-	char *sayport = findServerValue("heartbeat");
+	char *sayport = findServerValue("hostport");
 	if(sayport != NULL) {
 		return htons(atoi(sayport));
 	}
@@ -495,7 +495,7 @@ uint32_t Client::getServerAddress() {
 }
 uint32_t Client::getServerPort() {
 	uint16_t retip;
-	char *ipstr = findServerValue("hostport");
+	char *ipstr = findServerValue("heartbeat");
 	if(ipstr != NULL) {
 		retip = atoi(ipstr);
 		retip = htons(retip);
