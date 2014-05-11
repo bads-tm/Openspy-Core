@@ -41,6 +41,6 @@ class Client {
 		bool gotInit;
 		bool gotConnectAck;
 		gameInfo *game;
-		struct sockaddr_in sockinfo;
+		struct sockaddr_in sockinfo, connsock;
 };
 #endif

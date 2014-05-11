@@ -7,6 +7,7 @@ Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 	game = NULL;
 	this->sd = sd;
 	memcpy(&sockinfo,peer,sizeof(struct sockaddr_in));
+	memcpy(&connsock,peer,sizeof(struct sockaddr_in));
 	lastPacket = time(NULL);
 	version = 0;
 	cookie = 0;
@@ -54,6 +55,14 @@ void Client::handleReport(NatNegPacket *packet) {
 	sendto(sd,(char *)packet,REPORTPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
 }
 void Client::handleInitPacket(NatNegPacket *packet) {
+	if (packet->Packet.Init.porttype) {
+		Client *c;
+		if((c = find_user_by_cookie_index(packet->cookie, instance, packet->Packet.Init.clientindex)) != NULL) {
+			if(c != this) {
+				c->connsock.sin_port = connsock.sin_port;
+			}
+		}
+	}
 	version = packet->version;
 	cookie = packet->cookie;
 	cindex = packet->Packet.Init.clientindex;
@@ -97,13 +106,13 @@ void Client::SendConnectPacket(Client *user, bool sendToOther) {
 	connected = true;
 	sendpacket.Packet.Connect.remoteIP = user->sockinfo.sin_addr.s_addr;
 	sendpacket.Packet.Connect.remotePort = user->sockinfo.sin_port;
-	sendto(sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
+	sendto(sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&connsock,sizeof(struct sockaddr));
 	sentconnecttime = time(NULL);
 	if(!sendToOther) return;
 	user->sentconnecttime = time(NULL);
 	sendpacket.Packet.Connect.remoteIP = sockinfo.sin_addr.s_addr;
 	sendpacket.Packet.Connect.remotePort = sockinfo.sin_port;
-	sendto(user->sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&user->sockinfo,sizeof(struct sockaddr));
+	sendto(user->sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&user->connsock,sizeof(struct sockaddr));
 }
 void Client::handleNatifyRequest(NatNegPacket *packet) {
 	SendERTReply(packet->Packet.Init.porttype,packet);
