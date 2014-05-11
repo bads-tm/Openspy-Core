@@ -7,7 +7,7 @@ Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 	game = NULL;
 	this->sd = sd;
 	memcpy(&sockinfo,peer,sizeof(struct sockaddr_in));
-	memcpy(&connsock,peer,sizeof(struct sockaddr_in));
+	memcpy(&punching,peer,sizeof(struct sockaddr_in));
 	lastPacket = time(NULL);
 	version = 0;
 	cookie = 0;
@@ -59,7 +59,7 @@ void Client::handleInitPacket(NatNegPacket *packet) {
 		Client *c;
 		if((c = find_user_by_cookie_index(packet->cookie, instance, packet->Packet.Init.clientindex)) != NULL) {
 			if(c != this) {
-				c->connsock.sin_port = connsock.sin_port;
+				c->sockinfo.sin_port = sockinfo.sin_port;
 			}
 		}
 	}
@@ -104,15 +104,15 @@ void Client::SendConnectPacket(Client *user, bool sendToOther) {
 	if(instance != 1 || gotConnectAck || user->gotConnectAck || !gotInit) return;
 	user->connected = true;
 	connected = true;
-	sendpacket.Packet.Connect.remoteIP = user->sockinfo.sin_addr.s_addr;
-	sendpacket.Packet.Connect.remotePort = user->sockinfo.sin_port;
-	sendto(sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&connsock,sizeof(struct sockaddr));
+	sendpacket.Packet.Connect.remoteIP = user->punching.sin_addr.s_addr;
+	sendpacket.Packet.Connect.remotePort = user->punching.sin_port;
+	sendto(sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
 	sentconnecttime = time(NULL);
 	if(!sendToOther) return;
 	user->sentconnecttime = time(NULL);
-	sendpacket.Packet.Connect.remoteIP = sockinfo.sin_addr.s_addr;
-	sendpacket.Packet.Connect.remotePort = sockinfo.sin_port;
-	sendto(user->sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&user->connsock,sizeof(struct sockaddr));
+	sendpacket.Packet.Connect.remoteIP = punching.sin_addr.s_addr;
+	sendpacket.Packet.Connect.remotePort = punching.sin_port;
+	sendto(user->sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&user->sockinfo,sizeof(struct sockaddr));
 }
 void Client::handleNatifyRequest(NatNegPacket *packet) {
 	SendERTReply(packet->Packet.Init.porttype,packet);
