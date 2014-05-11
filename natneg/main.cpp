@@ -9,7 +9,7 @@ void handleConnection(int sd, struct sockaddr_in *peer, int instance, char *buff
 	char *p = (char *)&send;
 	int blen = 0;
 	int slen = sizeof(sockaddr_in);
-	Client *user = find_user(peer,0);
+	Client *user = find_user(peer,instance);
 	if(user == NULL) { //unregistered user, create
 		user = new Client(sd,peer,instance);
 		server.client_list.push_back(user);
