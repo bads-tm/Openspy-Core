@@ -16,7 +16,7 @@ Client::Client(int sd, struct  sockaddr_in peer) {
 	fromip = 0;
 	memcpy(&this->peer,&peer,sizeof(sockaddr_in));
 	memset(&encxkeyb,0,sizeof(encxkeyb));
-	lastKeepAlive = 0;
+	lastKeepAlive = time(NULL);
 	game = NULL;
 	queryGame = NULL;
 	cryptHeaderSent = false;

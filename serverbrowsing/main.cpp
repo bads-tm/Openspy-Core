@@ -21,6 +21,9 @@ int getnfds(fd_set *rset) {
 	return hsock;
 }
 void checkPing(Client *c) {
+	if(time(NULL)-SB_TIMEOUT_TIME > c->getLastPing()) {
+		shutdown(c->getSocket(),SHUT_RDWR);
+	}
 }
 void processClients(fd_set *rset) {
 	Client *c;
