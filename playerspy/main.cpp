@@ -8,12 +8,9 @@ modInfo *openspy_modInfo() {
 }
 bool checkPing(Client *c) {
 	time_t now = time(NULL);
-	/*
 	if(c->getLastPacket()+DISCONNECT_TIME < now) {
-		deleteClient(c);
-		return true;
+		shutdown(c->getSocket(),SHUT_RDWR);
 	}
-	*/
 	return false;
 }
 void processClients(fd_set *rset) {
