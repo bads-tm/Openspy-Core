@@ -13,6 +13,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	memcpy(&sockinfo,&peer,sizeof(struct sockaddr_in));
 	gen_random((char *)&challenge,6);
 	enctype = 0;
+	lastPing = time(NULL);
 	validated = false;
 	keyptr = NULL;
 	sendbuff = NULL;
@@ -78,6 +79,7 @@ void Client::processConnection(fd_set *rset) {
 }
 void Client::handleData(uint8_t *buff,uint32_t len) {
 	char cmd[64];
+	this->lastPing = time(NULL);
 	if(!find_param(0, (char *)buff, (char *)&cmd, sizeof(cmd))) {
 		return;
 	}
