@@ -574,7 +574,7 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&p, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)outbuff,len,MSG_NOSIGNAL);
-		free((void *)p);
+		//free((void *)p);
 		deleteClient(this);
 		return;
 	}
