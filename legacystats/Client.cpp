@@ -167,6 +167,8 @@ void Client::handleUpdateGame(char *buff,int len) {
 			int mlen = strlen(value) + 1;
 			key->value = (char *)malloc(mlen);
 			sprintf_s(key->value,mlen,"%s",value);
+		} else {
+			key->value = NULL;
 		}
 		gameKeys.push_back(key);
 	}
@@ -208,7 +210,7 @@ void Client::saveGame(bool done) {
 			strcat(savedata,key->name);
 		}
 		strcat(savedata,"\\");
-		if(key->name != NULL) {
+		if(key->value != NULL) {
 			strcat(savedata,key->value);
 		}
 		it++;
