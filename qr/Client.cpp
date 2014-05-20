@@ -445,18 +445,14 @@ std::list<customKey *> Client::copyServerKeys() {
 	customKey *key,*key2;
 	while(iterator != serverKeys.end()) {
 		key = *iterator;
-		if(key != NULL) {
+		if(key != NULL && key->name != NULL && key->value != NULL) {
 			key2 = (customKey *)malloc(sizeof(customKey));
-			if(key->name != NULL) {
-				key2->name = (char *)calloc(strlen(key->name)+1,1);
-				strcpy(key2->name,key->name);
-			}
-			if(key->value != NULL) {
-				key2->value = (char *)calloc(strlen(key->value)+1,1);
-				strcpy(key2->value,key->value);
-			}
+			key2->name = (char *)calloc(strlen(key->name)+1,1);
+			strcpy(key2->name,key->name);
+			key2->value = (char *)calloc(strlen(key->value)+1,1);
+			strcpy(key2->value,key->value);
+			rules.push_back(key2);
 		}
-		rules.push_back(key2);
 		iterator++;
 	}
 	return rules;
