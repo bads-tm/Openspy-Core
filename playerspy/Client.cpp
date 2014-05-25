@@ -621,7 +621,6 @@ end:
 	
 }
 void Client::handleRevoke(char *buff, int len) {
-	MYSQL_RES *res;
 	MYSQL_ROW row;
 	char query[256];
 	int pid = find_paramint("profileid",buff);
@@ -630,6 +629,14 @@ void Client::handleRevoke(char *buff, int len) {
 		fprintf(stderr, "%s\n", mysql_error(server.conn));
 		return;
 	}
+
+	MYSQL_RES *res = mysql_store_result(server.conn);
+
+	if(res == NULL) {
+		fprintf(stderr, "%s\n", mysql_error(server.conn));
+		return;
+	}
+
 	if(mysql_num_rows(res) < 1) {
 		sendError(sd,false,"This buddy does not have you on his list.",GP_REVOKE_NOT_BUDDY,1);
 		mysql_free_result(res);
