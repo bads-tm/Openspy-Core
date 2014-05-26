@@ -83,7 +83,6 @@ int main() {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	MYSQL *conn;
-	modLoadOptions options;
 	conn = mysql_init(NULL);
 	config = new Config("openspy.cfg");
 	mysql_server = config->getRootString("mysql_server");

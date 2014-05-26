@@ -29,7 +29,7 @@ void strip(char *buff, char delim) {
 }
 
 void find_and_replace(char *buff, char delim, int ch) {
-	for(int i=0;i<strlen(buff);i++) {
+	for(size_t i=0;i<strlen(buff);i++) {
 		if(buff[i]==delim) {
 			buff[i]=ch;
 		}
@@ -352,7 +352,7 @@ void gamespy3dxor(char *data, int len) {
 }
 int formatSend(int sd, bool putFinal, char enc, char *fmt, ...) {
 	va_list vars;
-	int len = 0;
+	size_t len = 0;
 	char buf[1024];
 	memset(&buf,0,sizeof(buf));
 	va_start (vars, fmt);
@@ -404,12 +404,11 @@ int gslame(int num) {
 
 
 int gspassenc(uint8_t *pass) {
-    int     i,
-            a,
+    int     a,
             c,
             d,
-            num,
-            passlen;
+            num;
+    size_t  passlen;
 
     passlen = strlen((const char *)pass);
     num = 0x79707367;   // "gspy"
@@ -419,7 +418,7 @@ int gspassenc(uint8_t *pass) {
         num &= 0x7fffffff;
     }
 
-    for(i = 0; i < passlen; i++) {
+    for(size_t i = 0; i < passlen; i++) {
         d = 0xff;
         c = 0;
         d -= c;
@@ -438,10 +437,11 @@ int gspassenc(uint8_t *pass) {
 
 
 uint8_t *base64_encode(uint8_t *data, int *size) {    // Gamespy specific!!!
-    int     len,
-            a,
+    int     a,
             b,
             c;
+    size_t  len;
+
     uint8_t      *buff,
             *p;
     static const uint8_t base[64] = {
@@ -480,12 +480,13 @@ uint8_t *base64_encode(uint8_t *data, int *size) {    // Gamespy specific!!!
 
 
 uint8_t *base64_decode(uint8_t *data, int *size) {
-    int     len,
-            xlen,
-            a   = 0,
+    int     a   = 0,
             b   = 0,
-            c,
+            c;
             step;
+    size_t  len,
+            xlen;
+
     uint8_t      *buff,
             *limit,
             *p;
@@ -579,7 +580,7 @@ char allowed[]=
 	return false;
 }
 void makeValid(char *name) {
-	for(int i=0;i<strlen(name);i++) {
+	for(size_t i=0;i<strlen(name);i++) {
 		if(!charValid(name[i])) {
 			name[i] = '_';
 		}
@@ -587,13 +588,13 @@ void makeValid(char *name) {
 }
 bool nameValid(char *name, bool peerchat) {
 	char bad_starters[] = "#@+&%";
-	for(int i=0;i<sizeof(bad_starters);i++) {
+	for(size_t i=0;i<sizeof(bad_starters);i++) {
 		if(name[0]==bad_starters[i]) {
 			if(name[0] != '\\' || !peerchat)
 				return false;
 		}
 	}
-	for(int i=0;i<strlen(name);i++) {
+	for(size_t i=0;i<strlen(name);i++) {
 		if(!charValid(name[i])) {
 			if(name[i] != '\\' || !peerchat)
 				return false;
@@ -613,11 +614,11 @@ int countchar(char *str, char ch, int len) {
 int countchar(char *str, char ch) {
 	return countchar(str,ch,strlen(str));
 }
-int makeStringSafe(char *buff, int len) {
+size_t makeStringSafe(char *buff, int len) {
 	char *obuff = (char *)malloc(len*2);
 	memset(obuff,0,len*2);
 	char *p = obuff;
-	int i;
+	size_t i;
 	for(i=0;i<len;i++) {
 		*(obuff++) = buff[i];
 //		if(buff[i] == '%') buff[i] = '_';

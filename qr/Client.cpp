@@ -115,9 +115,7 @@ void Client::setData(char *variable, char *value) {
 	}
 	if(key->name == NULL) {
 		key->name = (char *)calloc(strlen(variable)+1,1);
-		if(key->name != NULL) {
-			strcpy(key->name,variable);
-		}
+		strcpy(key->name,variable);
 	}
 	if(key->value != NULL) {
 		free((void *)key->value);
@@ -207,20 +205,25 @@ void Client::handleHeartbeat(char *buff, int len) {
 				x = BufferReadNTS((uint8_t **)&buff,(uint32_t *)&len);	
 				//BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte
 				indexedKey *key = (indexedKey *)malloc(sizeof(indexedKey));
+				
+				if(key == NULL) {
+					printf("Unable to allocate memory!");
+					exit(-1);
+				}
+
 				char *value = NULL;
-				if(key != NULL) {
-					char *name = (char *)nameValueList.at(i);
-					if(name != NULL) {
-					is_team = isTeamString((char *)name);
-					value = (char *)x;
-					key->key.name = (char *)calloc(strlen(name) +1,1);
-					strcpy(key->key.name,name);
-					} else key->key.name = NULL;
-					if(value != NULL) {
-						key->key.value = (char *)calloc(strlen(value)+1,1);
-						strcpy(key->key.value,value);
-					} else key->key.value = NULL;
-					key->index = player;
+				char *name = (char *)nameValueList.at(i);
+				if(name != NULL) {
+				is_team = isTeamString((char *)name);
+				value = (char *)x;
+				key->key.name = (char *)calloc(strlen(name) +1,1);
+				strcpy(key->key.name,name);
+				} else key->key.name = NULL;
+				if(value != NULL) {
+					key->key.value = (char *)calloc(strlen(value)+1,1);
+					strcpy(key->key.value,value);
+				} else key->key.value = NULL;
+				key->index = player;
 				}
 				if(is_team) {
 					teamKeys.push_back(key);
@@ -404,7 +407,6 @@ std::list<customKey *> Client::getRules() {
 	indexedKey *ikey;
 	while(iterator != serverKeys.end()) {
 		key = *iterator;
-		if(key == NULL || key->name == NULL || key->value == NULL) continue;
 		key2 = (customKey *)malloc(sizeof(customKey));
 		key2->name = (char *)calloc(strlen(key->name)+1,1);
 		strcpy(key2->name,key->name);
@@ -417,7 +419,6 @@ std::list<customKey *> Client::getRules() {
 	while(it2 != playerKeys.end()) {
 		ikey = *it2;
 		key = (customKey *)malloc(sizeof(customKey));
-		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) continue;
 		key->name = (char *)calloc(strlen(ikey->key.name)+32,1);
 		key->value = (char *)calloc(strlen(ikey->key.value)+32,1);
 		sprintf(key->name,"%s%d",ikey->key.name,ikey->index);

@@ -5,10 +5,8 @@ void *processConnection(threadOptions *options) {
 	handleroptions.lastKeepAlive = time(NULL);
 	bool firstPacket = true;
 	char buf[MAX_OUTGOING_REQUEST_SIZE + 1];
-	char type[128];
 	int len;
 	int sd = options->sd;
-	struct sockaddr_in peer;
 	memcpy(&handleroptions.peer,&options->peer,sizeof(struct sockaddr_in));
 	handleroptions.sd = sd;
 	free((void *)options);
@@ -187,7 +185,10 @@ void addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) {
 		} else if(strcasecmp(field,"numplayers") == 0) { //TODO: make this the amount of IRC users from peerchat
 			peerchatMsg.msgid = (char)EMsgID_NumUsersOnChan;
 			numUsersMsg = (msgNumUsersOnChan *)malloc(sizeof(msgNumUsersOnChan));
-			if(numUsersMsg == NULL) continue;
+			if(numUsersMsg == NULL) {
+				fprint(stderr, "Unable to allocate memory");
+				exit(1);
+			}
 			peerchatMsg.data = (void *)numUsersMsg;
 			memset(numUsersMsg,0,sizeof(msgNumUsersOnChan));
 			sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%u",atoi(row[0]));
@@ -227,9 +228,7 @@ char *findServerValue(char *name,serverList list) {
 	return NULL;
 }
 void addServerBuff(char **buff,int *len,handlerOptions *options, serverList slist) {
-	peerchatMsgData peerchatMsg;
-	msgNumUsersOnChan *numUsersMsg;
-	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
+	char field[MAX_FIELD_LIST_LEN + 1];
 	char *fdata;
 	int i=0;
 	uint8_t flags = 0;
@@ -289,8 +288,6 @@ void sendServers(handlerOptions *options) {
 	uint8_t *buff,*p;
 	uint16_t num_params = 0;
 	uint32_t len = 0;
-	MYSQL_RES *res;
-	MYSQL_ROW row;
 	char field[MAX_FIELD_LIST_LEN + 1];
 	int fi = 0;
 	bool sendPacket = false;
