@@ -60,15 +60,15 @@ char *Channel::getName() {
 void Channel::addUser(chanClient *user) {
 	chanClient *chan_client=(chanClient *)malloc(sizeof(chanClient));
 
-	if(chanClient == NULL) {
-		fprint(stderr, "Unable to allocate memory for channel client");
+	if(chan_client == NULL) {
+		fprintf(stderr, "Unable to allocate memory for channel client");
 		exit(1);
 	}
 	
 	char *unick;
 	if(user == NULL) {
 		free((void *)chan_client);
-		return
+		return;
 	};
 	if(user->client == NULL) {
 		free((void *)chan_client);

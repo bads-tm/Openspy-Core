@@ -224,7 +224,6 @@ void Client::handleHeartbeat(char *buff, int len) {
 					strcpy(key->key.value,value);
 				} else key->key.value = NULL;
 				key->index = player;
-				}
 				if(is_team) {
 					teamKeys.push_back(key);
 				} else {

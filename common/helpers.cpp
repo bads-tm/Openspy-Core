@@ -482,7 +482,7 @@ uint8_t *base64_encode(uint8_t *data, int *size) {    // Gamespy specific!!!
 uint8_t *base64_decode(uint8_t *data, int *size) {
     int     a   = 0,
             b   = 0,
-            c;
+            c,
             step;
     size_t  len,
             xlen;

@@ -342,7 +342,7 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) 
 			peerchatMsg.msgid = (char)EMsgID_NumUsersOnChan;
 			numUsersMsg = (msgNumUsersOnChan *)malloc(sizeof(msgNumUsersOnChan));
 			if(numUsersMsg == NULL) {
-				fprint(stderr, "Unable to allocate memory");
+				fprintf(stderr, "Unable to allocate memory");
 				exit(1);
 			}
 			peerchatMsg.data = (void *)numUsersMsg;

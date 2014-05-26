@@ -1275,9 +1275,9 @@ bool Client::cmd_listchans(char *params) {
 	return true;
 }
 bool Client::cmd_whowas(char *params) {
-	if(params == NULL) goto notenoughparams;
 	int i=0;
 	std::list<whowasInfo *>::iterator iterator = server.whowas_list.begin();
+	if(params == NULL) goto notenoughparams;
 	whowasInfo *info;
 	char timestr[64];
 	while(iterator != server.whowas_list.end()) {
@@ -1297,6 +1297,7 @@ bool Client::cmd_whowas(char *params) {
 	}
 	send_numeric(369,"%s :End of WHOWAS",params);
 	return true;
+	notenoughparams:
 	send_numeric(461,"WHOWAS :Not enough parameters");
 	return false;
 }
