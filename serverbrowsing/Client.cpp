@@ -511,6 +511,7 @@ void Client::sendServers() {
 			len = 0;
 			p = (uint8_t *)&buff;
 		}
+		freeServerRuleList(slist.serverKeys);
 		iterator++;
 	}
 	BufferWriteByte((uint8_t **)&p,(uint32_t *)&len,0x00);
@@ -519,7 +520,6 @@ void Client::sendServers() {
 	enctypex_func6e((unsigned char *)&encxkeyb,((unsigned char *)&buff)+headerLen,len-headerLen);
 	headerLen = 0;
 	send(sd,(const char *)buff,len,MSG_NOSIGNAL);
-	freeServerRuleList(slist.serverKeys);
 	return;
 }
 void Client::setupCryptHeader(uint8_t **dst, uint32_t *len) { 
