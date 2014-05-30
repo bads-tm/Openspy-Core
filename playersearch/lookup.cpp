@@ -1,5 +1,6 @@
 #include "lookup.h"
-void checkEmailValid(int sd,char *buff) {
+void checkEmailValid(MYSQL* conn,int sd,char *buff) {
+	MYSQL_RES *res;
 char data[GP_EMAIL_LEN];
 char query[256];
     if(!find_param("email", buff, data,sizeof(data))) {
@@ -17,7 +18,9 @@ char query[256];
    mysql_free_result(res);
    formatSend(sd,true,0,"\\vr\\%d",i);
 }
-void sendNicks(int sd, char *buff) {
+void sendNicks(MYSQL* conn,int sd, char *buff) {
+	MYSQL_RES *res;
+	MYSQL_ROW row;
     char email[GP_EMAIL_LEN];
     char pass[GP_PASSWORD_LEN];
     char query[1024];
@@ -56,6 +59,7 @@ void sendNicks(int sd, char *buff) {
 	int num_rows = mysql_num_rows(res);
 	if(num_rows == 0) {
 		formatSend(sd,true,0,"\\nr\\\\ndone\\");
+	        mysql_free_result(res);
 		return;
 	}
 	int len = 1024;
@@ -80,7 +84,7 @@ void sendNicks(int sd, char *buff) {
         mysql_free_result(res);
 	free((void *)sendmsg);
 }
-void checkNick(int sd, char *buff) {
+void checkNick(MYSQL* conn,int sd, char *buff) {
 	//TODO: add uniquenick support
 	char nick[GP_NICK_LEN],email[GP_EMAIL_LEN],pass[GP_PASSWORD_LEN];
 	char sendbuff[512];
@@ -126,7 +130,7 @@ void checkNick(int sd, char *buff) {
 	formatSend(sd,true,0,"\\cur\\0\\pid\\%d",profileid);
 	return;
 }
-void newUser(int sd, char *buff) {
+void newUser(MYSQL* conn,int sd, char *buff) {
 	//TODO: add uniquenick support
 	char sendbuff[512];
 	char nick[GP_NICK_LEN],email[GP_EMAIL_LEN],pass[GP_PASSWORD_LEN],uniquenick[GP_NICK_LEN];
@@ -195,7 +199,9 @@ void newUser(int sd, char *buff) {
 	}
 		
 }
-void searchUsers(int sd, char *buff) {
+void searchUsers(MYSQL* conn,int sd, char *buff) {
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	int searchnum = 0;
 	int sesskey = 0;
 	char nick[GP_NICK_LEN],email[GP_EMAIL_LEN],firstname[GP_FIRSTNAME_LEN],lastname[GP_LASTNAME_LEN],icquin[GP_AIMNAME_LEN],skip[GP_AIMNAME_LEN],uniquenick[GP_NICK_LEN];
@@ -352,7 +358,9 @@ void uniqueSearch(int sd, char *buff) {
 	sendmsg += "\\usdone\\";
 	formatSend(sd,true,0,"%s",sendmsg.c_str());
 }
-void sendReverseBuddies(int sd,char *msg) {
+void sendReverseBuddies(MYSQL* conn,int sd,char *msg) {
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	int len = 1024;
 	char tbuff[512];
 	#define addVal(x,y,z) if( z == 1 ||strlen(x)) { \

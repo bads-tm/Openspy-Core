@@ -1,11 +1,8 @@
 //player searching, gpsp.gamespy.com port 29901
 #include "main.h"
-MYSQL *conn;
-MYSQL_RES *res;
-MYSQL_ROW row;
 modInfo moduleInfo = {"playersearch","Gamespy Player Search(GPSP)"};
 modLoadOptions servoptions;
-bool do_db_check();
+bool do_db_check(MYSQL* conn);
 #ifdef _WIN32
 DWORD
 #else
@@ -39,6 +36,25 @@ void *processConnection(threadOptions *options) {
 	int len;
 	int sd = options->sd;
 	free((void *)options);
+	MYSQL *conn;
+	my_bool on=1;
+	conn = mysql_init(NULL);
+	mysql_options(conn,MYSQL_OPT_RECONNECT, &on);
+	/* Connect to database */
+	if (!mysql_real_connect(conn, servoptions.mysql_server,
+	servoptions.mysql_user, servoptions.mysql_password, servoptions.mysql_database, 0, NULL, CLIENT_MULTI_RESULTS)) {
+		fprintf(stderr, "%s\n", mysql_error(conn));
+		sendError(sd,"Database Error: try again later");
+		close(sd);
+		mysql_close(conn);
+		return NULL;
+	}
+	if(!do_db_check(conn)) {
+		sendError(sd,"Database Error: try again later");
+		close(sd);
+		mysql_close(conn);
+		return NULL;
+	}
 	struct timeval tv;
 	tv.tv_sec = 30;
 	tv.tv_usec = 0;
@@ -46,35 +62,42 @@ void *processConnection(threadOptions *options) {
 	len = recv(sd,buf,sizeof(buf),MSG_NOSIGNAL);
 	if(len == -1) { //timeout
 		sendError(sd,"The search has timedout");
+		close(sd);
+		mysql_close(conn);
 		return NULL;
 	}
 	makeStringSafe((char *)&buf, sizeof(buf));
 	if(!find_param(0, buf, type,sizeof(type))) {
 		sendError(sd,"Error recieving request");
+		close(sd);
+		mysql_close(conn);
 		return NULL;	
 	}
 	//TODO: pmatch(product matching), others(showing buddies),otherslist(wait until GPCM is implemented)
 	if(stricmp(type,"valid") == 0) {
-		checkEmailValid(sd,buf);
+		checkEmailValid(conn,sd,buf);
 	} else if(stricmp(type,"nicks") == 0) {
-		sendNicks(sd,buf);
+		sendNicks(conn,sd,buf);
 	} else if(stricmp(type,"check") == 0) {
-		checkNick(sd,buf);
+		checkNick(conn,sd,buf);
 	} else if(stricmp(type,"newuser") == 0) {
-		newUser(sd,buf);
+		newUser(conn,sd,buf);
 	} else if(stricmp(type,"search") == 0) { 
-		searchUsers(sd,buf);
+		searchUsers(conn,sd,buf);
 	} else if(stricmp(type,"others") == 0) {
-		sendReverseBuddies(sd,buf);
+		sendReverseBuddies(conn,sd,buf);
 	} else if(stricmp(type,"otherslist") == 0) {
 	} else if(stricmp(type,"uniquesearch") == 0) { //nameinator
 		uniqueSearch(sd,buf);
 	} else if(stricmp(type,"profilelist") == 0) { //nameinator
 	}else {
 		sendError(sd,"Error recieving request");	
+		close(sd);
+		mysql_close(conn);
 		return NULL;
 	}
 	close(sd);
+	mysql_close(conn);
 	return NULL;
 }
 void *openspy_mod_run(modLoadOptions *options)
@@ -85,14 +108,6 @@ void *openspy_mod_run(modLoadOptions *options)
   memset(&peer,0,sizeof(peer));
   int on=1;
   memcpy(&servoptions,options,sizeof(modLoadOptions));
-  conn = mysql_init(NULL);
-  mysql_options(conn,MYSQL_OPT_RECONNECT, (char *)&on);
-  /* Connect to database */
-  if (!mysql_real_connect(conn, servoptions.mysql_server,
-      servoptions.mysql_user, servoptions.mysql_password, servoptions.mysql_database, 0, NULL, CLIENT_MULTI_RESULTS)) {
-      fprintf(stderr, "%s\n", mysql_error(conn));
-      return NULL;
-  }
   peer.sin_port        = htons(SEARCHPORT);
   peer.sin_family      = AF_INET;
   peer.sin_addr.s_addr = servoptions.bindIP;
@@ -107,15 +122,10 @@ void *openspy_mod_run(modLoadOptions *options)
 	psz = sizeof(struct sockaddr_in);
         sda = accept(sd, (struct sockaddr *)&peer, &psz);
         if(sda <= 0) continue;
-	if(!do_db_check()) {
-		sendError(sda,"Database Error: try again later");
-		close(sda);
-		continue; //TODO: send database error message
-	}
 	handleConnection(sda);
     }
 }
-bool do_db_check() {
+bool do_db_check(MYSQL* conn) {
 	int mysql_status = mysql_ping(conn);
 	switch(mysql_status) {
 		case CR_COMMANDS_OUT_OF_SYNC: {

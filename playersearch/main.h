@@ -32,9 +32,6 @@ typedef int socklen_t;
 #define SEARCHPORT 29901
 #include <openspy/structs.h>
 #include "lookup.h"
-extern MYSQL *conn;
-extern MYSQL_RES *res;
-extern MYSQL_ROW row;
 typedef struct {
 	int sd;
 }threadOptions;
