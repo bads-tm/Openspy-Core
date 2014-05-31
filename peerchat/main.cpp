@@ -79,6 +79,7 @@ void loadChanProps() {
 	server.chanprops_list.push_back(props);
 	applyChanProps(props, false);
    }
+   mysql_free_result(res);
 }
 void loadUserModes() {
 	MYSQL_RES *res;

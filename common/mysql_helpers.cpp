@@ -107,8 +107,8 @@ int getProfileIDFromNickEmail(MYSQL *sql, char *nick, char *email) {
 	while ((row = mysql_fetch_row(res)) != NULL) {
 		profileid = atoi(row[0]);
 	}
-  	mysql_free_result(res);
 	end:
+  	mysql_free_result(res);
 	free((void *)query);	
 	return profileid;
 }
@@ -202,8 +202,8 @@ int getProfileIDFromUniquenick(MYSQL *sql, char *uniquenick) {
 	while ((row = mysql_fetch_row(res)) != NULL) {
 		profileid = atoi(row[0]);
 	}
-  	mysql_free_result(res);
 	end:
+  	mysql_free_result(res);
 	free((void *)query);	
 	return profileid;
 }

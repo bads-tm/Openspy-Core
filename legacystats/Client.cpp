@@ -447,6 +447,7 @@ char *Client::mergeKeys(char *keys,int localid,persisttype_t type,int index,int 
 	int mlen = strlen(keys) + strlen(curkeys) + 1;
 	rkeys = (char *)malloc(mlen);
 	if(rkeys == NULL) {
+		mysql_free_result(res);
 		return keys;
 	}
 	memset(rkeys,0,mlen);

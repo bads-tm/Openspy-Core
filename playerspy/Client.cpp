@@ -617,6 +617,7 @@ void Client::handleAuthAdd(char *buff, int len) {
 	sprintf_s(query,sizeof(query),"INSERT INTO `Presence`.`buddies` SET `profileid` = %d, `targetid` = %d",fromprofileid,profileid);
 	if(mysql_query(server.conn,query)) {
 		fprintf(stderr,"%s\n",mysql_error(server.conn));
+	  	mysql_free_result(res);
 		return;
 	}
 	c->buddies.push_back(profileid);
@@ -654,8 +655,10 @@ void Client::handleRevoke(char *buff, int len) {
 	sprintf_s(query,sizeof(query),"DELETE FROM `Presence`.`buddies` WHERE `profileid` = %d AND targetid = %d",pid,profileid);
 	if (mysql_query(server.conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(server.conn));
+		mysql_free_result(res);
 		return;
 	}
+	mysql_free_result(res);
 	return;
 }
 void Client::handleUpdateProfile(char *buff, int len) {
