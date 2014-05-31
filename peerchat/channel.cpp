@@ -1111,6 +1111,7 @@ void Channel::clearProps() {
 	if(curkey != NULL) {
 		if(key->value[0] == 0) {
 			chanKeys.remove(curkey);
+			free(curkey);
 			return false;
 		}
 		strcpy(curkey->value,key->value);
@@ -1184,6 +1185,7 @@ void Channel::clearnonGlobalModes() {
 		if(strcmp(usermode->chanmask,getName()) == 0) {
 			if(usermode->isGlobal == 0) {
 				server.usermodes_list.remove(usermode);
+				free(usermode);
 				iterator=server.usermodes_list.begin();
 				continue;
 			}

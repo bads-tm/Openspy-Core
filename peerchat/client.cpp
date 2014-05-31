@@ -2253,6 +2253,7 @@ bool Client::addUserParam(customKey* key) {
 	if(curkey != NULL) {
 		if(key->value[0] == 0) {
 			userKeys.remove(curkey);
+			free(curkey);
 			return false;
 		}
 		strcpy(curkey->value,key->value);

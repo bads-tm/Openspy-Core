@@ -467,6 +467,8 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 		usermode->usermodeid = -((usermode->usermodeid * 2) * rand());
 		server.usermodes_list.push_back(usermode);
 		applyUserMode(usermode);
+	} else {
+		free(usermode);
 	}
 }
 void applyUserModes(Client *user) {
@@ -1113,6 +1115,7 @@ void checkExpiry() {
 		info = *iterator3;
 		if(info->quittime+WHOWAS_TIMEOUT<time(NULL)) {
 			server.whowas_list.remove(info);
+			free(info);
 			iterator3=server.whowas_list.begin();
 			continue;
 		}
