@@ -1,8 +1,8 @@
 #include "lookup.h"
 void checkEmailValid(MYSQL* conn,int sd,char *buff) {
 	MYSQL_RES *res;
-char data[GP_EMAIL_LEN];
-char query[256];
+char data[GP_EMAIL_LEN] = { 0 };
+char query[256] = { 0 };
     if(!find_param("email", buff, data,sizeof(data))) {
        sendError(sd,"Error recieving request");
        return;	
@@ -21,10 +21,10 @@ char query[256];
 void sendNicks(MYSQL* conn,int sd, char *buff) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-    char email[GP_EMAIL_LEN];
-    char pass[GP_PASSWORD_LEN];
-    char query[1024];
-    char gamename[32];
+    char email[GP_EMAIL_LEN] = { 0 };
+    char pass[GP_PASSWORD_LEN] = { 0 };
+    char query[1024] = { 0 };
+    char gamename[32] = { 0 };
     bool sendUnique = false;
     if(!find_param("email", buff, email, sizeof(email))) {
        sendError(sd,"Error recieving request");
@@ -55,7 +55,7 @@ void sendNicks(MYSQL* conn,int sd, char *buff) {
    }
 	res = mysql_store_result(conn);
 	char *sendmsg;
-	char namestr[256];
+	char namestr[256] = { 0 };
 	int num_rows = mysql_num_rows(res);
 	if(num_rows == 0) {
 		formatSend(sd,true,0,"\\nr\\\\ndone\\");
@@ -86,8 +86,10 @@ void sendNicks(MYSQL* conn,int sd, char *buff) {
 }
 void checkNick(MYSQL* conn,int sd, char *buff) {
 	//TODO: add uniquenick support
-	char nick[GP_NICK_LEN],email[GP_EMAIL_LEN],pass[GP_PASSWORD_LEN];
-	char sendbuff[512];
+	char nick[GP_NICK_LEN] = { 0 };
+	char email[GP_EMAIL_LEN] = { 0 };
+	char pass[GP_PASSWORD_LEN] = { 0 };
+	char sendbuff[512] = { 0 };
 	int userid,profileid;
 	if(!find_param("nick", buff, nick, sizeof(nick))) {
 	       sendError(sd,"Error recieving request");
@@ -132,8 +134,11 @@ void checkNick(MYSQL* conn,int sd, char *buff) {
 }
 void newUser(MYSQL* conn,int sd, char *buff) {
 	//TODO: add uniquenick support
-	char sendbuff[512];
-	char nick[GP_NICK_LEN],email[GP_EMAIL_LEN],pass[GP_PASSWORD_LEN],uniquenick[GP_NICK_LEN];
+	char sendbuff[512] = { 0 };
+	char nick[GP_NICK_LEN] = { 0 };
+	char email[GP_EMAIL_LEN] = { 0 };
+	char pass[GP_PASSWORD_LEN] = { 0 };
+	char uniquenick[GP_NICK_LEN] = { 0 };
 	int userid,profileid;
 	find_param("uniquenick",buff,uniquenick,sizeof(uniquenick));
 	if(!find_param("nick", buff, nick, sizeof(nick))) {
@@ -204,11 +209,17 @@ void searchUsers(MYSQL* conn,int sd, char *buff) {
 	MYSQL_ROW row;
 	int searchnum = 0;
 	int sesskey = 0;
-	char nick[GP_NICK_LEN],email[GP_EMAIL_LEN],firstname[GP_FIRSTNAME_LEN],lastname[GP_LASTNAME_LEN],icquin[GP_AIMNAME_LEN],skip[GP_AIMNAME_LEN],uniquenick[GP_NICK_LEN];
+	char nick[GP_NICK_LEN] = { 0 };
+	char email[GP_EMAIL_LEN] = { 0 };
+	char firstname[GP_FIRSTNAME_LEN] = { 0 };
+	char lastname[GP_LASTNAME_LEN] = { 0 };
+	char icquin[GP_AIMNAME_LEN] = { 0 };
+	char skip[GP_AIMNAME_LEN] = { 0 };
+	char uniquenick[GP_NICK_LEN] = { 0 };
 	char *hideemail = "[hidden]";
 	char *trueemail;
 	int len = 1024;
-	char tbuff[512];
+	char tbuff[512] = { 0 };
 	char *query;
 	bool emailsearch = false;
 	int namespaceid = find_paramint("namespaceid",buff);
@@ -312,6 +323,7 @@ void searchUsers(MYSQL* conn,int sd, char *buff) {
 //	strcat(query," LIMIT 0,10");
 	if (mysql_query(conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
+		free(query);
 		return;
 	}
 	res = mysql_store_result(conn);
@@ -344,7 +356,7 @@ void searchUsers(MYSQL* conn,int sd, char *buff) {
 	free((void *)query);
 }
 void uniqueSearch(int sd, char *buff) {
-	char preferrednick[GP_NICK_LEN];
+	char preferrednick[GP_NICK_LEN] = { 0 };
 	if(!find_param("preferrednick", buff, preferrednick, sizeof(preferrednick))) {
 		sendError(sd,"Error recieving request");
 		return;	
@@ -362,7 +374,7 @@ void sendReverseBuddies(MYSQL* conn,int sd,char *msg) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	int len = 1024;
-	char tbuff[512];
+	char tbuff[512] = { 0 };
 	#define addVal(x,y,z) if( z == 1 ||strlen(x)) { \
 						sprintf_s(tbuff,sizeof(tbuff),"\\%s\\%s",y,x); \
 					} \
@@ -378,6 +390,7 @@ sprintf_s(query,len,"SELECT `GameTracker`.`profiles`.`profileid`,`uniquenick`,`e
 	printf("query is: %s\n",query);
 	if (mysql_query(conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
+		free(query);
 		return;
 	}
 	memset(query,0,len);

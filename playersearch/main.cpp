@@ -31,8 +31,8 @@ handleConnection(int sd) {
 	return tid;
 }
 void *processConnection(threadOptions *options) {
-	char buf[2048];
-	char type[128];
+	char buf[2048] = { 0 };
+	char type[128] = { 0 };
 	int len;
 	int sd = options->sd;
 	free((void *)options);
