@@ -374,6 +374,8 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, 
 					BufferWriteByte((uint8_t **)buff,(uint32_t *)len,0x00);
 				}
 				delete[] other;
+			} else {
+				BufferWriteByte((uint8_t **)buff,(uint32_t *)len,0x00);
 			}
 		}
 	}
