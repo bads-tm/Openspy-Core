@@ -179,7 +179,7 @@ int find_paramint(int num, char *buff) {
 bool find_param(char *name, char *buff, char *dst, int dstlen) {
 
 	char *loc;
-	int distance;
+	int distance = 0;
 	if(buff == NULL || name == NULL || dst == NULL || dstlen == 0) return false;
 	if(*buff == '\\') {
 		buff++;
@@ -212,7 +212,7 @@ bool find_param(int num, char *buff, char *dst, int dstlen) {
 		return 0;
 	}
 	char *loc;
-	int distance;
+	int distance = 0;
 	int i=0;
 	memset(dst,0,dstlen);
 	if(buff[0] == '\\') {

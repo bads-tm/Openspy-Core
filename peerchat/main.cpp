@@ -150,7 +150,7 @@ void processQueue(int sd) {
 	ssize_t len;
 	char buf[2048];
 	struct sockaddr si_other;
-	socklen_t slen;
+	socklen_t slen = sizeof(si_other);
 	msgAddOper *addOpermsg;
 	msgDelOper *delOpermsg;
 	msgSetChanProps *setChanPropsmsg;
