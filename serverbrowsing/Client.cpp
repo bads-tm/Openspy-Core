@@ -308,7 +308,8 @@ void Client::sendGroups() {
 	bool hasMaxServers = maxservers != 0;
 	res = mysql_store_result(conn);
 	while((row = mysql_fetch_row(res)) != NULL && (!hasMaxServers || maxservers--)) {
-		addGroupBuff((char **)&buff,(int *)&len ,(char *)fieldlist,row);
+		unsigned long* lengths = mysql_fetch_lengths(res);
+		addGroupBuff((char **)&buff,(int *)&len ,(char *)fieldlist,row,lengths);
 		if(len > MAX_OUTGOING_REQUEST_SIZE) {
 			cryptHeaderSent = true;
 			enctypex_func6e((unsigned char *)&encxkeyb,(unsigned char *)p+headerLen,len-headerLen);
@@ -327,7 +328,7 @@ void Client::sendGroups() {
 	send(sd,(const char *)p,len,MSG_NOSIGNAL);
 	free((void *)p);
 }
-void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) {
+void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, unsigned long* lengths) {
 	peerchatMsgData peerchatMsg;
 	msgNumUsersOnChan *numUsersMsg;
 	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
@@ -363,12 +364,16 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) 
 		} else if(strcasecmp(field,"maxwaiting") == 0) {
 			BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)row[2]);
 		} else {
-			if(row[3] != NULL) {
-				if(find_param(field,row[3],(char *)&fielddata,sizeof(fielddata))) {
+			if(lengths[3]) {
+				char* other = new char[lengths[3]+1];
+				strncpy(other,row[3],lengths[3]);
+				other[lengths[3]] = '\0';
+				if(find_param(field,other,(char *)&fielddata,sizeof(fielddata))) {
 					BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)&fielddata);
 				} else {
 					BufferWriteByte((uint8_t **)buff,(uint32_t *)len,0x00);
 				}
+				delete[] other;
 			}
 		}
 	}

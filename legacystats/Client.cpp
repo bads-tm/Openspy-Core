@@ -379,6 +379,7 @@ void Client::handleGetPD(char *buff,int len) {
 		formatSend(sd,true,2,"\\getpdr\\1\\lid\\0\\pid\\%d\\length\\%d\\data\\",pid,0);
 	} else {
 		row = mysql_fetch_row(res);
+		unsigned long* lengths = mysql_fetch_lengths(res);
 		int mlen = 1024;
 		char *sendstr = NULL;
 		int i=0;
@@ -396,7 +397,10 @@ void Client::handleGetPD(char *buff,int len) {
 				char buff3[256];
 //				printf("%s is kstr\n",buff2);
 //				memset(&buff2,0,sizeof(buff2));
-				if(find_param((char *)&buff2,row[0],(char *)&buff3,sizeof(buff3))) {
+				char* data = new char[lengths[0]+1];
+				strncpy(data,row[0],lengths[0]);
+				data[lengths[0]] = '\0';
+				if(find_param((char *)&buff2,data,(char *)&buff3,sizeof(buff3))) {
 					strcat(sendstr,"\\");
 					strcat(sendstr,buff2);
 					strcat(sendstr,"\\");
@@ -406,6 +410,7 @@ void Client::handleGetPD(char *buff,int len) {
 					}
 					strcat(sendstr,buff3);
 				}
+				delete[] data;
 			}
 		}
 		formatSend(sd,true,2,"\\getpdr\\1\\lid\\0\\pid\\%d\\mod\\%d\\length\\%d\\data\\%s",pid,modified,strlen(sendstr),sendstr);

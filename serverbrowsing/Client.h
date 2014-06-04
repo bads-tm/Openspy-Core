@@ -30,7 +30,7 @@ private:
 	void sendGroups();
 	void sendIP();
 	void handleData(uint8_t *buff, uint32_t len);
-	void addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row);
+	void addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, unsigned long* lengths);
 	void sendServers();
 	char *findServerValue(char *name,serverList list);
 	void addServerBuff(char **buff,int *len, serverList slist);
