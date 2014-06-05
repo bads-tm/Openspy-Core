@@ -480,7 +480,7 @@ uint32_t Client::getAddress() {
 uint32_t Client::getServerAddress() {
 	uint32_t retip;
 	char *ipstr = findServerValue("publicip");
-	if(ipstr != NULL) {
+	if(ipstr != NULL && strchr(ipstr, '.') != NULL) {
 		retip = inet_addr(ipstr);
 		return retip;
 	}
