@@ -389,7 +389,7 @@ bool Client::joinChan(char *name, chanClient *userInfo, char *key) { //specific 
 			userInfo->owner = true;
 			userInfo->halfop = true;
 			userInfo->op = true;
-			char modestr[256];
+			char modestr[256] = { 0 };
 			sprintf(modestr,"\\hostmask\\%s\\modeflags\\O\\isGlobal\\0\\comment\\Rogue Channel Creator",host);
 			addUserMode(NULL,name,modestr,true);
 		}
@@ -402,7 +402,7 @@ bool Client::joinChan(char *name, chanClient *userInfo, char *key) { //specific 
 			userInfo->owner = true;
 			userInfo->halfop = true;
 			userInfo->op = true;
-			char modestr[256];
+			char modestr[256] = { 0 };
 			sprintf(modestr,"\\hostmask\\%s\\modeflags\\o\\isGlobal\\0\\comment\\AllOps Channel",host);
 			addUserMode(NULL,name,modestr,true);
 	}
@@ -1105,7 +1105,7 @@ bool Client::cmd_delchanprops(char *params) {
 	 return false;
 }
 bool Client::cmd_kill(char *params) {
-	char setstr[128];
+	char setstr[128] = { 0 };
 	char *nullchar = "\0";
 	char *reason;
 	char *host;
@@ -1139,6 +1139,7 @@ bool Client::cmd_kill(char *params) {
 }
 bool Client::cmd_kline(char *params) {
 	char *host;
+	char setstr[128] = { 0 };
 	if(params == NULL) goto notenoughparams;
 	host = strchr(params,' ');
 	if(host != NULL) {
@@ -1149,7 +1150,6 @@ bool Client::cmd_kline(char *params) {
 	} else {
 		goto notenoughparams;
 	}
-	char setstr[128];
 	sprintf(setstr,"\\hostmask\\%s\\modeflags\\b\\comment\\Killed\\expiressec\\600",host);
 	addUserMode(this,"X",setstr,true);
 	return true;

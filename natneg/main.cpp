@@ -33,8 +33,10 @@ void checkTimeouts() {
 		user = *iterator;
 		if(user->getConnected()) {
 			if(!user->getConnectedAck()) {
-				if(time(NULL)-5 > user->getSendConnectTime()) {
-					user->trySendConnect(false);
+				if(user->getSendConnectTime()) {
+					if(time(NULL)-5 > user->getSendConnectTime()) {
+						user->trySendConnect(false);
+					}
 				}
 			}
 		}

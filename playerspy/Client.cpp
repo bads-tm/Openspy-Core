@@ -19,6 +19,7 @@ Client::Client(clientParams* params) {
 	formatSend(sd,true,0,"\\lc\\1\\challenge\\%s\\id\\1",challenge);
 	lastPacket = time(NULL);
 	free((void *)params);
+	sdkrevision = 3;
 }
 Client::~Client() {
 	close(sd);

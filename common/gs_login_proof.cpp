@@ -25,7 +25,7 @@
 void gs_login_proof_md5(unsigned char *data, int len, unsigned char *out) {
     md5_context         md5t;
     const static char   hex[] = "0123456789abcdef";
-    unsigned char       md5h[16];
+    unsigned char       md5h[16] = { 0 };
     int                 i;
 
     md5_starts(&md5t);

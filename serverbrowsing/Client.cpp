@@ -575,6 +575,7 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 	uint32_t len = 0;
 	uint8_t flags = 0;
 	serverList slist;
+	slist.ipaddr = 0;
 	customKey *key;
 	p = (uint8_t *)&outbuff;
 	x = (uint8_t *)&outbuff;

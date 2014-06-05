@@ -4,6 +4,7 @@ extern serverInfo server;
 extern modLoadOptions servoptions;
 Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 	connecttime = time(NULL);
+	sentconnecttime = NULL;
 	game = NULL;
 	this->sd = sd;
 	memcpy(&sockinfo,peer,sizeof(struct sockaddr_in));
