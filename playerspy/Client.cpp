@@ -164,7 +164,7 @@ void Client::handleLogin(char *buff, int len) {
 	char *proofuser = (char *)&user;
 	if(uniquenick[0] != 0) proofuser = (char *)&uniquenick;
 	getProfileIDPass(server.conn,profileid,(char *)&pass,sizeof(pass));
-	if(strcmp((const char *)gs_login_proof((unsigned char *)&pass,(unsigned char *)proofuser,(unsigned char *)&this->challenge,(unsigned char *)&challenge),response) != 0) { //invalid password
+	if(strcmp((const char *)gs_login_proof((unsigned char *)pass,(unsigned char *)proofuser,(unsigned char *)(this->challenge),(unsigned char *)challenge),response) != 0) { //invalid password
 		sendError(sd,true,"The password provided is incorrect.",GP_LOGIN_BAD_PASSWORD,1);
 		return;
 	}
@@ -173,7 +173,7 @@ void Client::handleLogin(char *buff, int len) {
 	memset(&lt,0,sizeof(lt));
 	gen_random(lt,22);
 	strcat(lt,"__");
-	formatSend(sd,true,0,"\\lc\\2\\sesskey\\%d\\proof\\%s\\userid\\%d\\profileid\\%d\\uniquenick\\%s\\lt\\%s\\id\\1",sesskey,gs_login_proof((unsigned char *)&pass,(unsigned char *)proofuser,(unsigned char *)&challenge,(unsigned char *)&this->challenge),userid,profileid,uniquenick,lt);	
+	formatSend(sd,true,0,"\\lc\\2\\sesskey\\%d\\proof\\%s\\userid\\%d\\profileid\\%d\\uniquenick\\%s\\lt\\%s\\id\\1",sesskey,gs_login_proof((unsigned char *)pass,(unsigned char *)proofuser,(unsigned char *)challenge,(unsigned char *)(this->challenge)),userid,profileid,uniquenick,lt);	
 	loadBuddies();
 	loadBlockedList();
 	sendMessages();
@@ -444,7 +444,7 @@ void Client::handleGetProfile(char *buff, int len) {
 		addFloat(sbuff,lenx,info.longitude,"\\lon\\")
 		addFloat(sbuff,lenx,info.latitude,"\\lat\\")
 		addStringStackNull(sbuff,lenx,info.place,"\\loc\\")
-		gs_login_proof_md5((unsigned char *)&sbuff,strlen(sbuff),(unsigned char *)&signature);
+		gs_login_proof_md5((unsigned char *)sbuff,strlen(sbuff),(unsigned char *)signature);
 		addString(sbuff,lenx,signature,"\\sig\\")
 		#define infoFree(x) if(x != NULL) free((void *)x);
 		formatSend(sd,true,0,"%s\\id\\%d",sbuff,id);
@@ -557,7 +557,7 @@ void Client::handleAddBuddy(char *buff, int len) {
 	find_param("syncrequested",buff,hashProfileInfo,sizeof(hashProfileInfo));
 	char md5buff[64];
 	int lenx = sprintf_s(md5buff,sizeof(md5buff),"%d%d",profileid,newprofileid);
-	gs_login_proof_md5((unsigned char *)&md5buff,lenx,(unsigned char *)&signature);
+	gs_login_proof_md5((unsigned char *)md5buff,lenx,(unsigned char *)signature);
 	Client *c;
 	mysql_real_escape_string(server.conn,hashProfileInfo,hashProfileInfo,strlen(hashProfileInfo));
 	mysql_real_escape_string(server.conn,reason,reason,strlen(reason));
