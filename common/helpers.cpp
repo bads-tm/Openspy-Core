@@ -185,7 +185,8 @@ bool find_param(char *name, char *buff, char *dst, int dstlen) {
 		buff++;
 	}
 	memset(dst,0,dstlen);
-	while(*buff) {
+	char* term = strchr(buff, '\0');
+	while(buff < term) {
 		loc = strchr(buff, '\\');
 		if(loc != NULL) {
 			distance = loc-buff;
@@ -218,7 +219,8 @@ bool find_param(int num, char *buff, char *dst, int dstlen) {
 	if(buff[0] == '\\') {
 		buff++;
 	}
-	while(*buff) {
+	char* term = strchr(buff, '\0');
+	while(buff < term) {
 		loc = strchr(buff, '\\');
 		distance = loc-buff;
 		if(i == num) {
