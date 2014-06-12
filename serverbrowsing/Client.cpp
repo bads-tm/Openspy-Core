@@ -499,16 +499,18 @@ void Client::sendServers() {
 	serverList slist;
 	bool hasMaxServers = maxservers != 0;
 	int maxservers = this->maxservers;
-	while(iterator != listData.server_list.end() && (!hasMaxServers || maxservers--) && listData.numServers--) {
+	while(iterator != listData.server_list.end() ) {
 		slist = *iterator;
-		addServerBuff((char**)&p,(int *)&len,slist);
-		if(len > MAX_OUTGOING_REQUEST_SIZE) {
-			cryptHeaderSent = true;
-			enctypex_func6e((unsigned char *)&encxkeyb,((unsigned char *)&buff)+headerLen,len-headerLen);
-			send(sd,(const char *)buff,len,MSG_NOSIGNAL);
-			headerLen = 0;
-			len = 0;
-			p = (uint8_t *)&buff;
+		if( (!hasMaxServers || (maxservers && maxservers--)) && (listData.numServers && listData.numServers--)) {
+			addServerBuff((char**)&p,(int *)&len,slist);
+			if(len > MAX_OUTGOING_REQUEST_SIZE) {
+				cryptHeaderSent = true;
+				enctypex_func6e((unsigned char *)&encxkeyb,((unsigned char *)&buff)+headerLen,len-headerLen);
+				send(sd,(const char *)buff,len,MSG_NOSIGNAL);
+				headerLen = 0;
+				len = 0;
+				p = (uint8_t *)&buff;
+			}
 		}
 		freeServerRuleList(slist.serverKeys);
 		iterator++;
@@ -812,10 +814,10 @@ int Client::getNumberOfServers(uint16_t groupid) {
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
 	int i = 0;
 	serverList slist;
-	while(iterator != listData.server_list.end() && listData.numServers--) {
+	while(iterator != listData.server_list.end() ) {
 		slist = *iterator;
 		freeServerRuleList(slist.serverKeys);
-		i++;
+		if( listData.numServers && listData.numServers--) i++;
 		iterator++;
 	}
 	return i;

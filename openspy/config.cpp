@@ -206,6 +206,7 @@ configVar *Config::getRootConfigVar(char *name) {
 		}
 		it++;
 	}
+	return NULL;
 }
 std::list<configVar *> Config::getRootInfo() {
 	return rootVariables;
@@ -224,6 +225,7 @@ configVar *Config::getRootArray(char *name) {
 		}
 		it++;
 	}
+	return NULL;
 }
 std::list<configVar *> Config::getArrayVariables(configVar *arrayptr) {
 	std::list<configVar *>::iterator it = rootVariables.begin();
