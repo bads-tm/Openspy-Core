@@ -685,6 +685,9 @@ time_t Client::getLastPing() {
 void Client::sendKeyList() {
 	uint8_t buff[512];
 	uint32_t len = 0;
+	if(game == NULL || queryGame == NULL) {
+		return;
+	}
 	uint8_t num_keys = queryGame->numPushKeys;
 	uint8_t *p = (uint8_t *)&buff;
 	if(!cryptHeaderSent) {
