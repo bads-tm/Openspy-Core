@@ -569,6 +569,7 @@ int Client::handleInfoRequest(uint8_t *buff, uint32_t len) {
 	qrRules.port = (port);
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	sendServerRules(qrRules.server_rules,ip,port);
+	freeServerRuleList(qrRules.server_rules);
 	return len;
 }
 void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, uint16_t port) {
@@ -649,7 +650,6 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 		BufferWriteNTS(&p,&len,(uint8_t*)key->value);
 		it++;
 	}
-	freeServerRuleList(server_rules);
 	BufferWriteByte(&p,&len,0);
 	uint16_t *y = (uint16_t *)x;
 	*y = reverse_endian16((uint16_t)len);
