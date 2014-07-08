@@ -67,7 +67,7 @@ void handleSnapshot(LSPSnapshotMsg *ssmsg) {
 	gameInfo *game;
 	game = server.options->gameInfoIDProc(ssmsg->gameid);
 	if(game == NULL) return; //shouldn't happen..
-	char fpath[256];
+	char fpath[256] = { 0 };
 	sprintf_s(fpath,sizeof(fpath),"files/legacystatsprocessor/lua/%s/scripts.cfg",game->name);
 	if(!file_exists(fpath)) {
 		return;
@@ -80,7 +80,7 @@ void handleSnapshot(LSPSnapshotMsg *ssmsg) {
 	}
 	lua_State *l;
 	int numfiles = conf->getArrayInt(var,"filecount");
-	char name[32];
+	char name[32] = { 0 };
 	for(int i=0;i<numfiles;i++) {
 		l = lua_open();
 		openlualibs(l);
