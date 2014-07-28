@@ -124,7 +124,7 @@ void checkTimeouts() {
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
 		if(time(NULL)-QR_PING_TIME > user->getLastPing()) {
-			deleteClient(user);
+			reallyDeleteClient(user);
 			iterator = server.client_list.begin();
 			continue;
 		}

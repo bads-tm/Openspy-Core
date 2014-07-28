@@ -20,6 +20,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	sbuffp = NULL;
 	sbuffalloclen = 0;
 	sendlen = 0;
+	deleteMe = false;
 	slen = sprintf_s(sbuff,sizeof(sbuff),"\\basic\\\\secure\\%s",challenge);
 	//for some reason theres a null byte sent at the end so send it here too
 	senddata((char *)&sbuff,slen,false,true,true,true);
@@ -48,6 +49,10 @@ time_t Client::getConnectTime() {
 	return connected;
 }
 void Client::processConnection(fd_set *rset) {
+	if (deleteMe) {
+		reallyDeleteClient(this);
+		return;
+	}
 	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = {0};
 	char type[128];
 	int len;

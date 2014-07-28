@@ -237,6 +237,9 @@ countryRegion countries[] = {
 							};
 extern serverInfo server;
 void deleteClient(Client *client) {
+	client->deleteMe = true;
+}
+void reallyDeleteClient(Client *client) {
 	std::list<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {

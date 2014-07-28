@@ -20,6 +20,7 @@ public:
 	void sendBuddyStatus(Client *c);
 	bool productInviteable(int productid);
 	time_t getLastPacket();
+	bool deleteMe;
 private:
 	void parseIncoming();
 	void parseIncoming(char *buff, int len);

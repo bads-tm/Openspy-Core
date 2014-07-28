@@ -18,6 +18,7 @@ public:
 	time_t getLastPing();
 	time_t getConnectTime();
 	void processConnection(fd_set *rset);
+	bool deleteMe;
 private:
 	void sendCryptHeader();
 	void handleData(uint8_t *buff,uint32_t len);

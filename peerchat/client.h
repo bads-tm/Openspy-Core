@@ -75,6 +75,7 @@ public:
 	bool waiting_ping;
 	time_t last_ping;
 	char uniquenick[MAX_NAME];//unique name for /nick *(killing duplicate names)
+	bool deleteMe;
 private:
 	void parseIncoming();
 	void parseIncoming(char *buff, int len);
