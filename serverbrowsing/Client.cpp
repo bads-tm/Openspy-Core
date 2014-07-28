@@ -87,7 +87,7 @@ Client::~Client() {
 void Client::handleData(uint8_t *buff, uint32_t len) {
 	int remaining = len;
 	this->lastKeepAlive = time(NULL);
-	while(remaining) {
+	while(remaining > 3) {
 //		printf("found packet type: %02X %d %d\n",buff[2],remaining,len);
 		if(nextMsgMsgReq == true) {
 			nextMsgMsgReq = false;
