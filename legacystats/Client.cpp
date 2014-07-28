@@ -16,6 +16,7 @@ Client::Client(clientParams* params) {
 	memset(&challenge,0,sizeof(challenge));
 	gen_random(challenge,10);
 	gameInProgress = false;
+	deleteMe = false;
 	formatSend(sd,true,2,"\\lc\\1\\challenge\\%s\\id\\1",challenge);
 	free((void *)params);
 }
@@ -30,6 +31,10 @@ int Client::getSocket() {
 	return sd;
 }
 void Client::mainLoop(fd_set *rset) {
+	if (deleteMe) {
+		reallyDeleteClient(this);
+		return;
+	}
 	if(!FD_ISSET(sd,rset)) return;
 	memset(&buff,0,sizeof(buff));
 	len = recv(sd,buff,sizeof(buff),0);

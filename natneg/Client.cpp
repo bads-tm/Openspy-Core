@@ -15,6 +15,7 @@ Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 	connected = false;
 	gotInit = false;
 	gotConnectAck = false;
+	deleteMe = false;
 }
 Client::~Client() {
 }

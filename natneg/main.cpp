@@ -22,7 +22,7 @@ void checkTimeouts() {
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
 		if(time(NULL)-NN_PING_TIME > user->getLastPacket()) {
-			deleteClient(user);
+			reallyDeleteClient(user);
 			iterator = server.client_list.begin();
 			continue;
 		}

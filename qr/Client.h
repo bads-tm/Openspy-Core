@@ -33,6 +33,7 @@ class Client {
 		void sendMsg(void *data, int len);
 		bool isServerRegistered();
 		countryRegion *getCountry();
+		bool deleteMe;
 	private:
 		void handleServerData(char *buff, int len);
 		void handleAvailable(char *buff, int len);

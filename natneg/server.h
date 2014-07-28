@@ -8,6 +8,7 @@ typedef struct {
 	std::list<Client *> client_list;	
 } serverInfo;
 void deleteClient(Client *client);
+void reallyDeleteClient(Client *client);
 Client *find_user(struct sockaddr_in *peer, int instance);
 Client *find_user(uint32_t ip, uint16_t port, int instance);
 Client *find_user_by_cookie(int cookie, int instance);

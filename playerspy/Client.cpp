@@ -13,6 +13,7 @@ Client::Client(clientParams* params) {
 	memset(&challenge,0,sizeof(challenge));
 	gen_random(challenge,10);
 	sentAddRequests = true;
+	deleteMe = false;
 	memset(&statusstr,0,sizeof(statusstr));
 	memset(&locstr,0,sizeof(locstr));
 	memset(&email,0,sizeof(email));
@@ -27,6 +28,10 @@ int Client::getSocket() {
 	return sd;
 }
 void Client::mainLoop(fd_set *rset) {
+	if (deleteMe) {
+		reallyDeleteClient(this);
+		return;
+	}
 	if(!FD_ISSET(sd,rset)) return;
 	memset(&buff,0,sizeof(buff));
 	len = recv(sd,buff,sizeof(buff),0);

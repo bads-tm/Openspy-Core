@@ -3,6 +3,7 @@
 #include "main.h"
 #include "structs.h"
 void deleteClient(Client *client);
+void reallyDeleteClient(Client *client);
 void deleteChannel(Channel *client);
 void sendToAll(char *str, ...);
 void sendWallops(Client *sender,char *msg);

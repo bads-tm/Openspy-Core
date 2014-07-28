@@ -23,6 +23,7 @@ public:
 	uint8_t *getFilter();
 	void pushServer(serverList slist);
 	void delServer(serverList slist);
+	bool deleteMe;
 private:
 	int handleListRequest(uint8_t *buff, uint32_t len);
 	int handleInfoRequest(uint8_t *buff, uint32_t len);

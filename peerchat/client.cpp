@@ -1896,10 +1896,15 @@ Client::Client(clientParams *params) {
 	weight = 0;
 	connected=time(NULL);
 	encryted = false;
+	deleteMe = false;
 	last_reply=connected+(PINGTIME*4);
 	free((void *)params);
  }
  void Client::mainLoop(fd_set *rset) {
+	if (deleteMe) {
+		reallyDeleteClient(this);
+		return;
+	}
 	if(checkQuit()) { //check if theres a reason to disconnect them
 		goto end;
 	}
