@@ -24,8 +24,8 @@ Client::Client(int sd, struct  sockaddr_in peer) {
 	nextMsgMsgReq = false;
 }
 void Client::processConnection(fd_set *rset) {
-	char buf[MAX_OUTGOING_REQUEST_SIZE + 1];
-	char type[128];
+	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = { 0 };
+	char type[128] = { 0 };
 	int len;
 	if(!FD_ISSET(sd,rset)) {
 		return;
@@ -138,6 +138,7 @@ int Client::handleMessageRequest(uint8_t *buff, uint32_t len) {
 	return len;
 }
 int Client::handleListRequest(uint8_t *buff, uint32_t len) {
+	char errmsg[128] = { 0 };
 	buff += 3; //skip the length and request type
 	len -= 3;
 	uint8_t listversion,encodingversion;
@@ -174,11 +175,10 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 	memcpy(&challenge,challenge,sizeof(challenge));
 	game = servoptions.gameInfoNameProc((char *)gamename);
 	queryGame = servoptions.gameInfoNameProc((char *)querygame);
-	char errmsg[128];
 	if(game != NULL && game->servicesdisabled != 0) {
 		uint8_t *buff,*p;
 		uint32_t len = 0;
-		buff = (uint8_t *)malloc(128);
+		buff = (uint8_t *)calloc(1, 128);
 		if(buff == NULL) return 0;
 		p = buff;
 		switch(game->servicesdisabled) {
@@ -200,7 +200,7 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 	} else if(queryGame != NULL && queryGame->servicesdisabled != 0) {
 		uint8_t *buff,*p;
 		uint32_t len = 0;
-		buff = (uint8_t *)malloc(128);
+		buff = (uint8_t *)calloc(1, 128);
 		if(buff == NULL) return 0;
 		p = buff;
 		switch(queryGame->servicesdisabled) {
@@ -237,7 +237,7 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 void Client::sendIP() {
 	uint8_t *buff,*p;
 	uint32_t len = 0;
-	buff = (uint8_t *)malloc(128);
+	buff = (uint8_t *)calloc(1, 128);
 	if(buff == NULL) return;
 	p = buff;
 	if(game == NULL || queryGame == NULL) {
@@ -265,11 +265,11 @@ void Client::sendGroups() {
 	uint32_t len = 0;
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	char query[256];
-	char field[MAX_FIELD_LIST_LEN + 1];
+	char query[256] = { 0 };
+	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
 	int fi = 0;
 	bool sendPacket = false;
-	buff = (uint8_t *)malloc(MAX_OUTGOING_REQUEST_SIZE * 2); //* 2 just in case it goes over the buffer size
+	buff = (uint8_t *)calloc(1, MAX_OUTGOING_REQUEST_SIZE * 2); //* 2 just in case it goes over the buffer size
 	if(buff == NULL) return;
 	p = buff;
 	if(!do_db_check()) {
@@ -331,7 +331,8 @@ void Client::sendGroups() {
 void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) {
 	peerchatMsgData peerchatMsg;
 	msgNumUsersOnChan *numUsersMsg;
-	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
+	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
+	char fielddata[MAX_FIELD_LIST_LEN + 1] = { 0 };
 	int i=0;
 	BufferWriteByte((uint8_t **)buff,(uint32_t *)len,HAS_KEYS_FLAG);
 	BufferWriteIntRE((uint8_t **)buff,(uint32_t *)len,atoi(row[0]));
@@ -341,7 +342,7 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) 
 			BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)row[1]);
 		} else if(strcasecmp(field,"numplayers") == 0) { //number of peerchat users in channel
 			peerchatMsg.msgid = (char)EMsgID_NumUsersOnChan;
-			numUsersMsg = (msgNumUsersOnChan *)malloc(sizeof(msgNumUsersOnChan));
+			numUsersMsg = (msgNumUsersOnChan *)calloc(1, sizeof(msgNumUsersOnChan));
 			if(numUsersMsg == NULL) continue;
 			peerchatMsg.data = (void *)numUsersMsg;
 			memset(numUsersMsg,0,sizeof(msgNumUsersOnChan));
@@ -353,7 +354,7 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) 
 			free(numUsersMsg);
 		} else if(strcasecmp(field,"numservers") == 0) {
 			int numservers = getNumberOfServers(atoi(row[0]));
-			char stext[32];	
+			char stext[32] = { 0 };	
 			sprintf_s(stext,sizeof(stext),"%d",numservers);
 			BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)stext);
 		}  else if(strcasecmp(field,"numwaiting") == 0) {
@@ -392,7 +393,8 @@ char *Client::findServerValue(char *name,serverList list) {
 void Client::addServerBuff(char **buff,int *len, serverList slist) {
 	peerchatMsgData peerchatMsg;
 	msgNumUsersOnChan *numUsersMsg;
-	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
+	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
+	char fielddata[MAX_FIELD_LIST_LEN + 1] = { 0 };
 	char *fdata;
 	int i=0;
 	uint8_t flags = 0;
@@ -459,13 +461,13 @@ void Client::addServerBuff(char **buff,int *len, serverList slist) {
 	}
 }
 void Client::sendServers() {
-	uint8_t buff[MAX_OUTGOING_REQUEST_SIZE * 2];
+	uint8_t buff[MAX_OUTGOING_REQUEST_SIZE * 2] = { 0 };
 	uint8_t *p;
 	uint16_t num_params = 0;
 	uint32_t len = 0;
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	char field[MAX_FIELD_LIST_LEN + 1];
+	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
 	int fi = 0;
 	bool sendPacket = false;
 	p = (uint8_t *)&buff;
@@ -527,9 +529,9 @@ void Client::setupCryptHeader(uint8_t **dst, uint32_t *len) {
 //	memset(&options->cryptkey,0,sizeof(options->cryptkey));
 	srand(time(NULL));
 	uint32_t cryptlen = CRYPTCHAL_LEN;
-	uint8_t cryptchal[CRYPTCHAL_LEN];
+	uint8_t cryptchal[CRYPTCHAL_LEN] = { 0 };
 	uint32_t servchallen = SERVCHAL_LEN;
-	uint8_t servchal[SERVCHAL_LEN];
+	uint8_t servchal[SERVCHAL_LEN] = { 0 };
 	headerLen = (servchallen+cryptlen)+(sizeof(uint8_t)*2);
 	uint16_t *backendflags = (uint16_t *)(&cryptchal);
 	for(uint32_t i=0;i<cryptlen;i++) {
@@ -566,7 +568,8 @@ int Client::handleInfoRequest(uint8_t *buff, uint32_t len) {
 }
 void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, uint16_t port) {
 	std::list<customKey *>::iterator it;
-	uint8_t outbuff[1024],*p,*x;
+	uint8_t outbuff[1024] = { 0 };
+	uint8_t *p,*x;
 	uint32_t len = 0;
 	uint8_t flags = 0;
 	serverList slist;
@@ -674,7 +677,7 @@ time_t Client::getLastPing() {
 	return lastKeepAlive;
 }
 void Client::sendKeyList() {
-	uint8_t buff[512];
+	uint8_t buff[512] = { 0 };
 	uint32_t len = 0;
 	if(game == NULL || queryGame == NULL) {
 		return;
@@ -699,7 +702,7 @@ void Client::sendKeyList() {
 	send(sd,(char *)&buff,len,MSG_NOSIGNAL|MSG_DONTWAIT);
 }
 void Client::delServer(serverList slist) {
-	uint8_t data[256];
+	uint8_t data[256] = { 0 };
 	uint8_t *p = (uint8_t *)(&data);
 	uint16_t *olen = (uint16_t *)&data[0];
 	uint32_t len = 0;
@@ -717,7 +720,7 @@ void Client::delServer(serverList slist) {
 	send(sd,(char *)&data,len,MSG_NOSIGNAL|MSG_DONTWAIT);
 }
 void Client::pushServer(serverList slist) {
-	uint8_t data[256];
+	uint8_t data[256] = { 0 };
 	uint32_t len = 0;
 	uint8_t flags = 0;
 	char *fdata;
@@ -809,7 +812,7 @@ int Client::getNumberOfServers(uint16_t groupid) {
 	qrServerList listData;
 	msg.data = (void *)&listData;
 	listData.game = queryGame;
-	char filter[256];
+	char filter[256] = { 0 };
 	sprintf_s(filter,sizeof(filter),"groupid=%d",groupid);
 	listData.filter = (uint8_t *)&filter;
 	msg.msgID = EQRMsgID_GetServer;
