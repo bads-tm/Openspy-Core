@@ -31,7 +31,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	legacyQuery = false;
 }
 void Client::handleLegacyIncoming(char *buff, int len) {
-	char type[128];
+	char type[128] = { 0 };
 	if(!find_param(0,buff,(char *)&type,sizeof(type))) {
 		return; //no type
 	}
@@ -52,6 +52,7 @@ void Client::handleIncoming(char *buff, int len) {
 	lastPing = time(NULL);//treat anything as a ping response
 	if(len < 3) {
 		deleteClient(this);
+		return;
 	}
 	if(!legacyQuery && buff[0] == '\\') {
 		bool success = true;
@@ -96,7 +97,7 @@ void Client::handleIncoming(char *buff, int len) {
 	}
 }
 void Client::handleKeepalive(char *buff,int len) {
-	char buffer[256];
+	char buffer[256] = { 0 };
 	int blen = 0;
 	char *p = (char *)&buffer;
 	BufferWriteByte((uint8_t**)&p,(uint32_t *)&blen,QR_MAGIC_1);
@@ -114,8 +115,7 @@ void Client::setData(char *variable, char *value) {
 	}
 	key = findKey(variable);
 	if(key == NULL) {
-		key = (customKey *)malloc(sizeof(customKey));
-		memset(key,0,sizeof(customKey));
+		key = (customKey *)calloc(1,sizeof(customKey));
 		serverKeys.push_back(key);
 	}
 	if(key->name == NULL) {
@@ -131,7 +131,7 @@ void Client::setData(char *variable, char *value) {
 	}
 }
 void Client::handleServerData(char *buff, int len) {
-	char variable[128],value[128];
+	char variable[128] = { 0 },value[128] = { 0 };
 	int i=0;
 	clearKeys();
 	while(find_param(i++,buff,(char *)&variable,sizeof(variable))) {
@@ -153,14 +153,14 @@ void Client::handleLegacyHeartbeat(char *buff,int len) {
 		serverRegistered = true;
 	}
 	uint32_t blen = 0;
-	uint8_t buffer[24];
+	uint8_t buffer[24] = { 0 };
 	uint8_t *p = (uint8_t *)&buffer;
 	BufferWriteNTS((uint8_t**)&p,(uint32_t *)&blen,(uint8_t *)"\\status\\");
 	blen--; //we don't want the null byte
 	sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
 }
 void Client::handleHeartbeat(char *buff, int len) {
-	char buffer[MAX_DATA_SIZE];
+	char buffer[MAX_DATA_SIZE] = { 0 };
 	char *p = (char *)&buffer;
 	int blen = 0;
 	if(!hasInstanceKey) { //XXX: is this right? hasn't the data been skipped in the check? nvm because if hasInstanceKey is false it won't try read the instance key
@@ -209,7 +209,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 				bool is_team;
 				x = BufferReadNTS((uint8_t **)&buff,(uint32_t *)&len);	
 				//BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte
-				indexedKey *key = (indexedKey *)malloc(sizeof(indexedKey));
+				indexedKey *key = (indexedKey *)calloc(1,sizeof(indexedKey));
 				
 				if(key == NULL) {
 					printf("Unable to allocate memory!");
@@ -276,7 +276,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 	}
 }
 void Client::handleAvailable(char *buff, int len) {
-	char buffer[MAX_DATA_SIZE];
+	char buffer[MAX_DATA_SIZE] = { 0 };
 	char *p = (char *)&buffer;
 	int blen = 0;
 	uint8_t disabledservices = 0; //available
@@ -294,8 +294,8 @@ void Client::handleAvailable(char *buff, int len) {
 	sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
 }
 void Client::handleChallenge(char *buff, int len) {
-	char challenge[90];
-	char buffer[MAX_DATA_SIZE];
+	char challenge[90] = { 0 };
+	char buffer[MAX_DATA_SIZE] = { 0 };
 	char *p = (char *)&buffer;
 	int blen = 0;
 	gameInfo *game = NULL;
@@ -367,7 +367,7 @@ customKey *Client::findKey(char *name) {
 	return NULL;
 }
 char *Client::findServerValue(char *name) {
-	static char regionbuff[16];
+	static char regionbuff[16] = { 0 };
 	std::list<customKey *>::iterator iterator;
 	iterator=serverKeys.begin();
 	customKey *key;
@@ -415,7 +415,7 @@ std::list<customKey *> Client::getRules() {
 			iterator++;
 			continue;
 		}
-		key2 = (customKey *)malloc(sizeof(customKey));
+		key2 = (customKey *)calloc(1,sizeof(customKey));
 		key2->name = (char *)calloc(strlen(key->name)+1,1);
 		strcpy(key2->name,key->name);
 		key2->value = (char *)calloc(strlen(key->value)+1,1);
@@ -430,7 +430,7 @@ std::list<customKey *> Client::getRules() {
 			it2++;
 			continue;
 		}
-		key = (customKey *)malloc(sizeof(customKey));
+		key = (customKey *)calloc(1,sizeof(customKey));
 		key->name = (char *)calloc(strlen(ikey->key.name)+32,1);
 		key->value = (char *)calloc(strlen(ikey->key.value)+32,1);
 		sprintf(key->name,"%s%d",ikey->key.name,ikey->index);
@@ -445,7 +445,7 @@ std::list<customKey *> Client::getRules() {
 			it2++;
 			continue;
 		}
-		key = (customKey *)malloc(sizeof(customKey));
+		key = (customKey *)calloc(1,sizeof(customKey));
 		key->name = (char *)calloc(strlen(ikey->key.name)+32,1);
 		key->value = (char *)calloc(strlen(ikey->key.value)+32,1);
 		sprintf(key->name,"%s%d",ikey->key.name,ikey->index);
@@ -463,7 +463,7 @@ std::list<customKey *> Client::copyServerKeys() {
 	while(iterator != serverKeys.end()) {
 		key = *iterator;
 		if(key != NULL && key->name != NULL && key->value != NULL) {
-			key2 = (customKey *)malloc(sizeof(customKey));
+			key2 = (customKey *)calloc(1,sizeof(customKey));
 			key2->name = (char *)calloc(strlen(key->name)+1,1);
 			strcpy(key2->name,key->name);
 			key2->value = (char *)calloc(strlen(key->value)+1,1);
@@ -546,7 +546,7 @@ void Client::pushDelete() {
 	servoptions.sendMsgProc(moduleInfo.name,"serverbrowsing",(void *)&msg,sizeof(sbServerMsg));
 }
 void Client::sendMsg(void *data, int len) {
-	uint8_t senddata[256];
+	uint8_t senddata[256] = { 0 };
 	uint32_t blen = 0;
 	uint8_t *test = (uint8_t *)data;
 	uint8_t *p = (uint8_t *)&senddata;
