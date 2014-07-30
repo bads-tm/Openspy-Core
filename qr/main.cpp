@@ -14,6 +14,7 @@ bool findMatchingServers(qrServerList *listData, char *sendmodule) {
 	int i=0;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
+		if(!(user->isBusyUpdatingKeys()))
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
 				slist.serverKeys = user->copyServerKeys();
@@ -34,6 +35,7 @@ void findMatchingServers_GetRules(qrServerRules *rulesData, char *sendmodule) {
 	user = find_user(rulesData->ipaddr,rulesData->port);
 	if(user != NULL) {
 		//getRules allocates data which must be freed
+		if(!(user->isBusyUpdatingKeys()))
 		rulesData->server_rules = user->getRules();
 	}
 }
