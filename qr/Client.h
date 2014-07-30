@@ -32,6 +32,7 @@ class Client {
 		uint32_t getServerPort();
 		void sendMsg(void *data, int len);
 		bool isServerRegistered();
+		bool isBusyUpdatingKeys();
 		countryRegion *getCountry();
 		bool deleteMe;
 	private:
@@ -56,6 +57,7 @@ class Client {
 		bool sentChallenge;
 		bool hasInstanceKey;
 		bool serverRegistered;
+		bool busyUpdatingKeys;
 		bool legacyQuery;
 		countryRegion *country;
 		gameInfo *game;

@@ -21,6 +21,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	hasInstanceKey = false;
 	game = NULL;
 	serverRegistered = false;
+	busyUpdatingKeys = false;
 	deleteMe = false;
 	char *code = NULL;
 	#ifndef _WIN32
@@ -133,6 +134,7 @@ void Client::setData(char *variable, char *value) {
 void Client::handleServerData(char *buff, int len) {
 	char variable[128] = { 0 },value[128] = { 0 };
 	int i=0;
+	busyUpdatingKeys = true;
 	clearKeys();
 	while(find_param(i++,buff,(char *)&variable,sizeof(variable))) {
 		if(find_param(i++,buff,(char *)&value,sizeof(value))) {
@@ -143,6 +145,7 @@ void Client::handleServerData(char *buff, int len) {
 		deleteClient(this);
 		return;
 	}
+	busyUpdatingKeys = false;
 }
 void Client::handleLegacyHeartbeat(char *buff,int len) {
 	int i=0;
@@ -171,6 +174,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 	}
 	int i = 0;
 	customKey *key = NULL;
+	busyUpdatingKeys = true;
 	clearKeys();
 	uint8_t *x;
 	while((buff[0] != 0 && len > 0) || (i%2 != 0)) {
@@ -189,6 +193,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 		free((void *)x);
 		i++;
 	}
+	busyUpdatingKeys = false;
 	uint16_t num_values = 0;
 	BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte(seperator)
 	while((num_values = BufferReadShortRE((uint8_t**)&buff,(uint32_t *)&len))) {
@@ -327,6 +332,7 @@ time_t Client::getLastPing() {
 	return lastPing;
 }
 void Client::clearKeys() {
+	busyUpdatingKeys = true;
 	customKey *key;
 	while(!serverKeys.empty()) {
 		key = serverKeys.front();
@@ -562,4 +568,7 @@ void Client::sendMsg(void *data, int len) {
 }
 bool Client::isServerRegistered() {
 	return serverRegistered;
+}
+bool Client::isBusyUpdatingKeys() {
+	return busyUpdatingKeys;
 }
