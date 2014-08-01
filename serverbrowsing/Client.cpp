@@ -1,5 +1,6 @@
 #include "Client.h"
 #include "server.h"
+#include <cstddef>
 Client::Client(int sd, struct  sockaddr_in peer) {
 	this->sd = sd;
 	querygame = NULL;
@@ -581,21 +582,23 @@ int Client::handleInfoRequest(uint8_t *buff, uint32_t len) {
 }
 void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, uint16_t port) {
 	std::list<customKey *>::iterator it;
-	uint8_t outbuff[1024] = { 0 };
+	size_t outbuffsize = 1024;
+	uint8_t* outbuff = (uint8_t*)calloc(1,outbuffsize);
 	uint8_t *p,*x;
 	uint32_t len = 0;
 	uint8_t flags = 0;
 	serverList slist;
 	slist.ipaddr = 0;
 	customKey *key;
-	p = (uint8_t *)&outbuff;
-	x = (uint8_t *)&outbuff;
+	p = outbuff;
+	x = outbuff;
 	char *fdata;
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&p, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)outbuff,len,MSG_NOSIGNAL);
 		//free((void *)p);
 		deleteClient(this);
+		free(outbuff);
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -651,14 +654,26 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 		BufferWriteShort(&p,&len,localport);
 	}
 	BufferWriteInt(&p,&len,ip);	
-	printf("sendServerRules %#x %#x %s %s %u %u\n",ip,port,game->name,queryGame->name,server_rules.size(),slist.serverKeys.size());
+	printf("sendServerRules %#x %#x %s %s %u %u",ip,port,game->name,queryGame->name,server_rules.size(),slist.serverKeys.size());
 	it = server_rules.begin();
 	while(it != server_rules.end()) {
 		key = *it;
+		size_t newstuff = strlen(key->name) + strlen(key->value);
+		if((p - x + newstuff) > (outbuffsize / 2)) {
+			ptrdiff_t pd = p - outbuff;
+			ptrdiff_t xd = x - outbuff;
+			printf(" realloc %u %u",outbuffsize,outbuffsize+newstuff+1024);
+			outbuff = (uint8_t*)realloc(outbuff,outbuffsize+newstuff+1024);
+			memset(outbuff+outbuffsize,0,newstuff+1024);
+			outbuffsize += newstuff+1024;
+			p = outbuff + pd;
+			x = outbuff + xd;
+		}
 		BufferWriteNTS(&p,&len,(uint8_t*)key->name);
 		BufferWriteNTS(&p,&len,(uint8_t*)key->value);
 		it++;
 	}
+	printf("\n");
 	BufferWriteByte(&p,&len,0);
 	uint16_t *y = (uint16_t *)x;
 	*y = reverse_endian16((uint16_t)len);
@@ -666,6 +681,7 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 	cryptHeaderSent = true;
 	headerLen = 0;
 	send(sd,(const char *)x,len,MSG_NOSIGNAL|MSG_DONTWAIT);
+	free(outbuff);
 }
 void Client::freeServerRuleList(std::list<customKey *> slist) {
 	std::list<customKey *>::iterator it;
