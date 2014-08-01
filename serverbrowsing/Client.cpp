@@ -651,7 +651,7 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 		BufferWriteShort(&p,&len,localport);
 	}
 	BufferWriteInt(&p,&len,ip);	
-	printf("sendServerRules for %s %s at %d %d\nserver_rules.size = %d\nslist.serverKeys.size = %d\n",game->name,queryGame->name,ip,port,server_rules.size(),slist.serverKeys.size());
+	printf("sendServerRules %#x %#x %s %s %u %u\n",ip,port,game->name,queryGame->name,server_rules.size(),slist.serverKeys.size());
 	it = server_rules.begin();
 	while(it != server_rules.end()) {
 		key = *it;
