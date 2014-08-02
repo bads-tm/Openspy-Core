@@ -49,10 +49,6 @@ time_t Client::getConnectTime() {
 	return connected;
 }
 void Client::processConnection(fd_set *rset) {
-	if (deleteMe) {
-		reallyDeleteClient(this);
-		return;
-	}
 	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = {0};
 	char type[128];
 	int len;

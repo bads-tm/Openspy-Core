@@ -46,10 +46,6 @@ void Client::handleLegacyIncoming(char *buff, int len) {
 	}
 }
 void Client::handleIncoming(char *buff, int len) {
-	if (deleteMe) {
-		reallyDeleteClient(this);
-		return;
-	}
 	lastPing = time(NULL);//treat anything as a ping response
 	if(len < 3) {
 		deleteClient(this);

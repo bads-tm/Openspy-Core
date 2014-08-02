@@ -1,4 +1,5 @@
 #include "main.h"
+#include "server.h"
 #include "Client.h"
 MYSQL *conn;
 modInfo moduleInfo = {"legacyms","GameSpy Legacy Master Server"};
@@ -30,6 +31,8 @@ void processClients(fd_set *rset) {
 		c=*iterator;
 		checkPing(c);
 		c->processConnection(rset);
+		if(c->deleteMe)
+			reallyDeleteClient(c);
 		iterator++;
 	}
 }

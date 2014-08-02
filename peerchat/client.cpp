@@ -1901,10 +1901,6 @@ Client::Client(clientParams *params) {
 	free((void *)params);
  }
  void Client::mainLoop(fd_set *rset) {
-	if (deleteMe) {
-		reallyDeleteClient(this);
-		return;
-	}
 	if(checkQuit()) { //check if theres a reason to disconnect them
 		goto end;
 	}
