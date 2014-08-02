@@ -26,10 +26,6 @@ Client::Client(int sd, struct  sockaddr_in peer) {
 	deleteMe = false;
 }
 void Client::processConnection(fd_set *rset) {
-	if (deleteMe) {
-		reallyDeleteClient(this);
-		return;
-	}
 	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = { 0 };
 	int len;
 	if(!FD_ISSET(sd,rset)) {

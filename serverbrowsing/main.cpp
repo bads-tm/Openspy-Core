@@ -1,4 +1,5 @@
 #include "main.h"
+#include "server.h"
 #include "Client.h"
 #include <qr/structs.h>
 #include "structs.h"
@@ -33,6 +34,8 @@ void processClients(fd_set *rset) {
 		c=*iterator;
 		checkPing(c);
 		c->processConnection(rset);
+		if(c->deleteMe)
+			reallyDeleteClient(c);
 		iterator++;
 	}
 }

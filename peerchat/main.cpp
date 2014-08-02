@@ -29,6 +29,8 @@ void processClients(fd_set *rset) {
 			c=*iterator;
 			checkPing(c);
 			c->mainLoop(rset);
+			if(c->deleteMe)
+				reallyDeleteClient(c);
 			iterator++;
 		 }
 }

@@ -1,4 +1,5 @@
 #include "main.h"
+#include "server.h"
 #include "Client.h"
 #include "filter.h"
 modInfo moduleInfo = {"qr","Gamespy Query and Reporting server(heartbeat)"};
@@ -50,6 +51,8 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 		server.client_list.push_back(user);
 	}
 	user->handleIncoming(buff,len);
+	if(user->deleteMe)
+		reallyDeleteClient(user);
 	
 }
 void *openspy_mod_run(modLoadOptions *options) {

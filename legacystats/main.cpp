@@ -1,4 +1,5 @@
 #include "main.h"
+#include "server.h"
 #include "Client.h"
 #define DISCONNECT_TIME 300
 legacyStatsServer server;
@@ -24,6 +25,8 @@ void processClients(fd_set *rset) {
 				continue;
 			}
 			c->mainLoop(rset);
+			if(c->deleteMe)
+				reallyDeleteClient(c);
 			iterator++;
 		 }
 }

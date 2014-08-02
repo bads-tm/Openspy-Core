@@ -29,10 +29,6 @@ int Client::getSocket() {
 	return sd;
 }
 void Client::mainLoop(fd_set *rset) {
-	if (deleteMe) {
-		reallyDeleteClient(this);
-		return;
-	}
 	if(!FD_ISSET(sd,rset)) return;
 	memset(&buff,0,sizeof(buff));
 	len = recv(sd,buff,sizeof(buff),0);
