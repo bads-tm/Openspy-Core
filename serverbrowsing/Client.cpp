@@ -570,7 +570,7 @@ int Client::handleInfoRequest(uint8_t *buff, uint32_t len) {
 }
 void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, uint16_t port) {
 	std::list<customKey *>::iterator it;
-	size_t outbuffsize = 1024;
+	size_t outbuffsize = 4096;
 	uint8_t* outbuff = (uint8_t*)calloc(1,outbuffsize);
 	uint8_t *p,*x;
 	uint32_t len = 0;
@@ -648,9 +648,9 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 		if((p - x + newstuff) > (outbuffsize / 2)) {
 			ptrdiff_t pd = p - outbuff;
 			ptrdiff_t xd = x - outbuff;
-			outbuff = (uint8_t*)realloc(outbuff,outbuffsize+newstuff+1024);
-			memset(outbuff+outbuffsize,0,newstuff+1024);
-			outbuffsize += newstuff+1024;
+			outbuff = (uint8_t*)realloc(outbuff,outbuffsize+newstuff+4096);
+			memset(outbuff+outbuffsize,0,newstuff+4096);
+			outbuffsize += newstuff+4096;
 			p = outbuff + pd;
 			x = outbuff + xd;
 		}
