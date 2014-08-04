@@ -101,14 +101,14 @@ void *openspy_mod_run(modLoadOptions *options)
 }
 void pushServer(sbPushMsg *msg) {
 	Client *c;
-	std::list <Client *> clist = server.client_list;
-	std::list<Client *>::iterator iterator=clist.begin();
+	std::list <Client *> * clist = &(server.client_list);
+	std::list<Client *>::iterator iterator=clist->begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
-	while(iterator != clist.end()) {
+	while(iterator != clist->end()) {
 		c=*iterator;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
@@ -120,14 +120,14 @@ void pushServer(sbPushMsg *msg) {
 }
 void deleteServer(sbPushMsg *msg) {
 	Client *c;
-	std::list <Client *> clist = server.client_list;
-	std::list<Client *>::iterator iterator=clist.begin();
+	std::list <Client *> * clist = &(server.client_list);
+	std::list<Client *>::iterator iterator=clist->begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
-	while(iterator != clist.end()) {
+	while(iterator != clist->end()) {
 		c=*iterator;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {

@@ -174,7 +174,7 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 	this->srcip = srcip;
 	this->maxservers = maxServers;
 	fromip = peer.sin_addr.s_addr;
-	memcpy(&challenge,challenge,sizeof(challenge));
+//	memcpy(&challenge,challenge,sizeof(challenge));
 	game = servoptions.gameInfoNameProc((char *)gamename);
 	queryGame = servoptions.gameInfoNameProc((char *)querygame);
 	if(game != NULL && game->servicesdisabled != 0) {
