@@ -1,4 +1,4 @@
 start:
-	g++ *.cpp -fPIC -L/usr/lib64/mysql -lmysqlclient -lGeoIP -Wno-write-strings -shared -o ../openspy/modules/qr.so -I.. ../common/*.cpp ../common/*.c
+	g++ *.cpp -fPIC -L/usr/lib64/mysql -lmysqlclient -lGeoIP -Wno-write-strings -fmudflapth -lmudflapth -Wstack-protector -fstack-protector-all -shared -o ../openspy/modules/qr.so -I.. ../common/*.cpp ../common/*.c
 debug:
 	g++ *.cpp -lmysqlclient -lGeoIP -Wno-write-strings -ggdb -shared -o ../openspy/modules/qr.so -I.. ../common/*.cpp ../common/*.c

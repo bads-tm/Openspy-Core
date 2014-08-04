@@ -283,8 +283,9 @@ char *geoIPConvert(char *name) {
 		const char *geoIPName;
 		const char *gsName;
 	} geocountries[] = {{"GB","UK"}};
+	std::string n(name);
 	for(int i=0;i<sizeof(geocountries)/sizeof(geoipConvData);i++) {
-		if(strcmp(name,geocountries[i].geoIPName) == 0) {
+		if(n.compare(geocountries[i].geoIPName) == 0) {
 			return (char *)geocountries[i].gsName;
 		}
 	}
@@ -292,10 +293,12 @@ char *geoIPConvert(char *name) {
 }
 countryRegion *findCountryByName(char *name) {
 	int size = sizeof(countries)/sizeof(countryRegion);
+	std::string n;
 	if(name == NULL) goto end;
 	name = geoIPConvert(name);
+	n = name;
 	for(int i=0;i<size;i++) {
-		if(strcmp(countries[i].countrycode,name) == 0) {
+		if(n.compare(countries[i].countrycode) == 0) {
 			return &countries[i];
 		}
 	}
