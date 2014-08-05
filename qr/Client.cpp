@@ -21,7 +21,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	hasInstanceKey = false;
 	game = NULL;
 	serverRegistered = false;
-	busyUpdatingKeys = false;
+	sem_init(&lockedKeys,0,1);
 	deleteMe = false;
 	char *code = NULL;
 	#ifndef _WIN32
@@ -130,18 +130,18 @@ void Client::setData(char *variable, char *value) {
 void Client::handleServerData(char *buff, int len) {
 	char variable[128] = { 0 },value[128] = { 0 };
 	int i=0;
-	busyUpdatingKeys = true;
+	lockKeys();
 	clearKeys();
 	while(find_param(i++,buff,(char *)&variable,sizeof(variable))) {
 		if(find_param(i++,buff,(char *)&value,sizeof(value))) {
 			setData((char *)&variable,(char *)&value);
 		}
 	}
+	unlockKeys();
 	if(getStateChanged() == 2) {
 		deleteClient(this);
 		return;
 	}
-	busyUpdatingKeys = false;
 }
 void Client::handleLegacyHeartbeat(char *buff,int len) {
 	int i=0;
@@ -170,7 +170,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 	}
 	int i = 0;
 	customKey *key = NULL;
-	busyUpdatingKeys = true;
+	lockKeys();
 	clearKeys();
 	uint8_t *x;
 	while((buff[0] != 0 && len > 0) || (i%2 != 0)) {
@@ -189,7 +189,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 		free((void *)x);
 		i++;
 	}
-	busyUpdatingKeys = false;
+	unlockKeys();
 	uint16_t num_values = 0;
 	BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte(seperator)
 	while((num_values = BufferReadShortRE((uint8_t**)&buff,(uint32_t *)&len))) {
@@ -319,7 +319,10 @@ void Client::handleChallenge(char *buff, int len) {
 }
 Client::~Client() {
 	pushDelete();
+	lockKeys();
 	clearKeys();
+	unlockKeys();
+	sem_destroy(&lockedKeys);
 }
 struct sockaddr_in *Client::getSockAddr() {
 	return (struct sockaddr_in *)&sockinfo;
@@ -328,7 +331,6 @@ time_t Client::getLastPing() {
 	return lastPing;
 }
 void Client::clearKeys() {
-	busyUpdatingKeys = true;
 	customKey *key;
 	while(!serverKeys.empty()) {
 		key = serverKeys.front();
@@ -565,6 +567,9 @@ void Client::sendMsg(void *data, int len) {
 bool Client::isServerRegistered() {
 	return serverRegistered;
 }
-bool Client::isBusyUpdatingKeys() {
-	return busyUpdatingKeys;
+void Client::lockKeys() {
+	sem_wait(&lockedKeys);
+}
+void Client::unlockKeys() {
+	sem_post(&lockedKeys);
 }
