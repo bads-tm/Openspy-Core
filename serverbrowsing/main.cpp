@@ -8,7 +8,14 @@ modInfo moduleInfo = {"serverbrowsing","GameSpy ServerBrowsing server"};
 modLoadOptions servoptions;
 serverInfo server;
 bool do_db_check();
+void lockClientList(){
+	sem_wait(&(server.locked_client_list));
+}
+void unlockClientList(){
+	sem_post(&(server.locked_client_list));
+}
 int getnfds(fd_set *rset) {
+	lockClientList();
 	int hsock = 0;
 	Client *c;
 	std::list<Client *>::iterator iterator=server.client_list.begin();
@@ -19,6 +26,7 @@ int getnfds(fd_set *rset) {
 		FD_SET(sock,rset);
 		iterator++;
 	}
+	unlockClientList();
 	return hsock;
 }
 void checkPing(Client *c) {
@@ -27,6 +35,7 @@ void checkPing(Client *c) {
 	}
 }
 void processClients(fd_set *rset) {
+	lockClientList();
 	Client *c;
 	std::list <Client *> clist = server.client_list;
 	std::list<Client *>::iterator iterator=clist.begin();
@@ -38,6 +47,7 @@ void processClients(fd_set *rset) {
 			reallyDeleteClient(c);
 		iterator++;
 	}
+	unlockClientList();
 }
 void *openspy_mod_run(modLoadOptions *options)
 {
@@ -70,6 +80,7 @@ void *openspy_mod_run(modLoadOptions *options)
       < 0) return NULL;
     struct timeval timeout;
     memset(&timeout,0,sizeof(struct timeval));
+	sem_init(&(server.locked_client_list),0,1);
     for(;;) {
 	int hsock;
 	FD_ZERO(&rset);
@@ -95,11 +106,15 @@ void *openspy_mod_run(modLoadOptions *options)
 		continue;
 	}
 	Client *c = new Client(sda,user);
+	lockClientList();
 	server.client_list.push_front(c);
+	unlockClientList();
 	//handleConnection(sda,&peer);
     }
+	sem_destroy(&(server.locked_client_list));
 }
 void pushServer(sbPushMsg *msg) {
+	lockClientList();
 	Client *c;
 	std::list <Client *> * clist = &(server.client_list);
 	std::list<Client *>::iterator iterator=clist->begin();
@@ -117,8 +132,10 @@ void pushServer(sbPushMsg *msg) {
 		}
 		iterator++;
 	}
+	unlockClientList();
 }
 void deleteServer(sbPushMsg *msg) {
+	lockClientList();
 	Client *c;
 	std::list <Client *> * clist = &(server.client_list);
 	std::list<Client *>::iterator iterator=clist->begin();
@@ -136,6 +153,7 @@ void deleteServer(sbPushMsg *msg) {
 		}
 		iterator++;
 	}
+	unlockClientList();
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {
 	sbServerMsg *msg = (sbServerMsg *)data;
