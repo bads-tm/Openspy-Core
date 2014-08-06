@@ -8,40 +8,31 @@ serverInfo server;
 #ifndef _WIN32
 GeoIP *gi;
 #endif
-void lockClientList(){
-	sem_wait(&(server.locked_client_list));
-}
-void unlockClientList(){
-	sem_post(&(server.locked_client_list));
-}
 bool findMatchingServers(qrServerList *listData, char *sendmodule) {
-	lockClientList();
 	std::list<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	serverList slist;
 	int i=0;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
+		user->lockKeys();
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
-				user->lockKeys();
 				slist.serverKeys = user->copyServerKeys();
-				user->unlockKeys();
 				slist.port = user->getServerPort();
 				slist.ipaddr = user->getServerAddress();
 				slist.country = user->getCountry();
 				listData->server_list.push_back(slist);
 			}
 		}
+		user->unlockKeys();
 		i++;	
 		iterator++;
 	}
-	unlockClientList();
 	listData->numServers = i;
 	return i != 0;
 }
 void findMatchingServers_GetRules(qrServerRules *rulesData, char *sendmodule) {
-	lockClientList();
 	Client *user;
 	user = find_user(rulesData->ipaddr,rulesData->port);
 	if(user != NULL) {
@@ -50,10 +41,8 @@ void findMatchingServers_GetRules(qrServerRules *rulesData, char *sendmodule) {
 		rulesData->server_rules = user->getRules();
 		user->unlockKeys();
 	}
-	unlockClientList();
 }
 void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
-	lockClientList();
 	char send[256];
 	char *p = (char *)&send;
 	int blen = 0;
@@ -66,7 +55,6 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 	user->handleIncoming(buff,len);
 	if(user->deleteMe)
 		reallyDeleteClient(user);
-	unlockClientList();
 	
 }
 void *openspy_mod_run(modLoadOptions *options) {
@@ -92,7 +80,6 @@ void *openspy_mod_run(modLoadOptions *options) {
   if(bind(sd,(struct sockaddr *)&si_me,sizeof(si_me)) == -1)
    return NULL;
 	struct timeval tv;
-  sem_init(&(server.locked_client_list),0,1);
   for(;;) {
     memset((char *)&buf,0, sizeof(buf));
     tv.tv_sec = 60;
@@ -107,16 +94,13 @@ void *openspy_mod_run(modLoadOptions *options) {
 //  makeStringSafe((char *)&buf, sizeof(buf));
     handleClient(sd,(struct sockaddr_in *)&si_other,(char *)&buf,len);
   }
-	sem_destroy(&(server.locked_client_list));
 	return NULL;
 }
 void sendClientMessage(qrClientMsg *cmsg) {
-	lockClientList();
 	Client *c = find_user(cmsg->toip,cmsg->toport);
 	if(c != NULL) {
 		c->sendMsg(cmsg->data,cmsg->len);
 	}
-	unlockClientList();
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {
 	qrServerMsg *msg = (qrServerMsg *)data;
@@ -142,7 +126,6 @@ modInfo *openspy_modInfo() {
 	return &moduleInfo;
 }
 void checkTimeouts() {
-	lockClientList();
 	std::list<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
@@ -154,5 +137,4 @@ void checkTimeouts() {
 		}
 		iterator++;
 	}
-	unlockClientList();
 }

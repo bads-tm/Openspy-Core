@@ -1,4 +1,3 @@
-#include <semaphore.h>
 #ifndef _QR_STRUCTS_INC
 #define _QR_STRUCTS_INC
 #define REGIONID_AMERICAS 1
@@ -40,7 +39,7 @@ typedef struct {
 } indexedKey;
 typedef struct {
 	std::list<Client *> client_list;	
-	sem_t locked_client_list;
+	pthread_mutex_t locked_client_list;
 } serverInfo;
 typedef struct {
 	const char *countrycode;

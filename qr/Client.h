@@ -58,7 +58,7 @@ class Client {
 		bool sentChallenge;
 		bool hasInstanceKey;
 		bool serverRegistered;
-		sem_t lockedKeys;
+		pthread_mutex_t lockedKeys;
 		bool legacyQuery;
 		countryRegion *country;
 		gameInfo *game;
