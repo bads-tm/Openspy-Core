@@ -9,10 +9,10 @@ modLoadOptions servoptions;
 serverInfo server;
 bool do_db_check();
 void lockClientList(){
-	sem_wait(&(server.locked_client_list));
+	pthread_mutex_lock(&(server.locked_client_list));
 }
 void unlockClientList(){
-	sem_post(&(server.locked_client_list));
+	pthread_mutex_unlock(&(server.locked_client_list));
 }
 int getnfds(fd_set *rset) {
 	lockClientList();
@@ -80,7 +80,7 @@ void *openspy_mod_run(modLoadOptions *options)
       < 0) return NULL;
     struct timeval timeout;
     memset(&timeout,0,sizeof(struct timeval));
-	sem_init(&(server.locked_client_list),0,1);
+	pthread_mutex_init(&(server.locked_client_list),NULL);
     for(;;) {
 	int hsock;
 	FD_ZERO(&rset);
@@ -111,7 +111,7 @@ void *openspy_mod_run(modLoadOptions *options)
 	unlockClientList();
 	//handleConnection(sda,&peer);
     }
-	sem_destroy(&(server.locked_client_list));
+	pthread_mutex_destroy(&(server.locked_client_list));
 }
 void pushServer(sbPushMsg *msg) {
 	lockClientList();

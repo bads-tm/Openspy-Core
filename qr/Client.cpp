@@ -21,7 +21,7 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	hasInstanceKey = false;
 	game = NULL;
 	serverRegistered = false;
-	sem_init(&lockedKeys,0,1);
+	pthread_mutex_init(&lockedKeys,NULL);
 	deleteMe = false;
 	char *code = NULL;
 	#ifndef _WIN32
@@ -322,7 +322,7 @@ Client::~Client() {
 	lockKeys();
 	clearKeys();
 	unlockKeys();
-	sem_destroy(&lockedKeys);
+	pthread_mutex_destroy(&lockedKeys);
 }
 struct sockaddr_in *Client::getSockAddr() {
 	return (struct sockaddr_in *)&sockinfo;
@@ -568,8 +568,8 @@ bool Client::isServerRegistered() {
 	return serverRegistered;
 }
 void Client::lockKeys() {
-	sem_wait(&lockedKeys);
+	pthread_mutex_lock(&lockedKeys);
 }
 void Client::unlockKeys() {
-	sem_post(&lockedKeys);
+	pthread_mutex_unlock(&lockedKeys);
 }
