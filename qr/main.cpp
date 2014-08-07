@@ -37,7 +37,6 @@ void findMatchingServers_GetRules(qrServerRules *rulesData, char *sendmodule) {
 	user = find_user(rulesData->ipaddr,rulesData->port);
 	if(user != NULL) {
 		//getRules allocates data which must be freed
-		user->lockKeys();
 		rulesData->server_rules = user->getRules();
 		user->unlockKeys();
 	}
@@ -100,6 +99,7 @@ void sendClientMessage(qrClientMsg *cmsg) {
 	Client *c = find_user(cmsg->toip,cmsg->toport);
 	if(c != NULL) {
 		c->sendMsg(cmsg->data,cmsg->len);
+		c->unlockKeys();
 	}
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {

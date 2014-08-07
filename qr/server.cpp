@@ -271,9 +271,11 @@ Client *find_user(uint32_t ip, uint16_t port) {
 	Client *user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
+		user->lockKeys();
 		if(user->getServerAddress() == ip && user->getServerPort() == port) {
 			return user;
 		}
+		user->unlockKeys();
 		iterator++;
 	}
 	return NULL;
