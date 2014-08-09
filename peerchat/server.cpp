@@ -6,7 +6,7 @@ void deleteClient(Client *client) {
 	client->deleteMe = true;
 }
 void reallyDeleteClient(Client *client) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		if(*iterator==client) {
@@ -37,8 +37,8 @@ void sendToAll(char *str, ...) {
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
 	va_end(args);
-	std::list<Client *> list = server.client_list;
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *> list = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -51,8 +51,8 @@ void sendWallops(Client *sender,char *msg) {
 	char sbuff[MAX_BUFF];
 	char *nick,*user,*cnick;
 	memset(&sbuff,0,sizeof(sbuff));
-	std::list<Client *> list = server.client_list;
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *> list = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -72,8 +72,8 @@ void sendToAllOpers(uint32_t rights,char *str,...) {
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
 	va_end(args);
-	std::list<Client *> list = server.client_list;
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *> list = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -92,8 +92,8 @@ void sendToAllOpers(char *str,...) {
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
 	va_end(args);
-	std::list<Client *> list = server.client_list;
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *> list = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -123,7 +123,7 @@ void sendToAllOpers(char *str,...) {
 bool nameInUse(char *name) {
 	Client *c;
 	char *cnick;
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 		 while(iterator != server.client_list.end()) {
 			c=*iterator;
 			c->getUserInfo(&cnick,NULL,NULL,NULL);
@@ -170,7 +170,7 @@ Channel *find_chan(char *name) {
 	return NULL;
 }
 Client *find_user(char *name) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *chan;
 	char *cname;
 	while(iterator != server.client_list.end()) {
@@ -547,7 +547,7 @@ bool isGlobalBanned(Client *user) {
 	return false;
 }
 void applyUserMode(userMode *usermode) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	if(tolower(usermode->chanmask[0]) == 'x' && usermode->chanmask[1] == 0) { //global
 		while(iterator != server.client_list.end()) {
@@ -811,7 +811,7 @@ userMode *getUserMode(int usermodeid) {
 	return NULL;
 }
 void removeUsermode(userMode *usermode, bool nosql) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	if(nosql || usermode->isGlobal == 0) {
 		if(tolower(usermode->chanmask[0]) == 'x' && usermode->chanmask[1] == 0) {
@@ -1265,8 +1265,8 @@ void sendToAllWithMode(uint32_t mode, char *str,...) {
 	char sbuff[MAX_BUFF];
 	int slen;
 	va_list args;
-	std::list<Client *> list = server.client_list;
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *> list = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator;
 	memset(&sbuff,0,sizeof(sbuff));
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
@@ -1313,7 +1313,7 @@ void removeChannelInvite(Client *user, Channel *chan) {
 	}
 }
 void resetByProfileID(int profileid, char *reason) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
@@ -1389,7 +1389,7 @@ bool deleteGameClient(char *chanmask, int gameid) {
 	return false;
 }
 Client *findClientBySocket(int sd) {
-	std::list<Client *>::iterator it = server.client_list.begin();
+	boost::unordered_set<Client *>::iterator it = server.client_list.begin();
 	Client *client;
 	while(it != server.client_list.end()) {
 		client = *it;
@@ -1402,7 +1402,7 @@ Client *findClientBySocket(int sd) {
 }
 int numUsersByIP(uint32_t ip) {
 	int i=0;
-	std::list<Client *>::iterator it = server.client_list.begin();
+	boost::unordered_set<Client *>::iterator it = server.client_list.begin();
 	Client *client;
 	while(it != server.client_list.end()) {
 		client = *it;

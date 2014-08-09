@@ -9,7 +9,7 @@ serverInfo server;
 GeoIP *gi;
 #endif
 bool findMatchingServers(qrServerList *listData, char *sendmodule) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	serverList slist;
 	int i=0;
@@ -49,7 +49,7 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 	Client *user = find_user(si_other);
 	if(user == NULL) { //unregistered user, create
 		user = new Client(sd,si_other);
-		server.client_list.push_back(user);
+		server.client_list.insert(user);
 	}
 	user->handleIncoming(buff,len);
 	if(user->deleteMe)
@@ -126,7 +126,7 @@ modInfo *openspy_modInfo() {
 	return &moduleInfo;
 }
 void checkTimeouts() {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;

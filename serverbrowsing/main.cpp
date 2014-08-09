@@ -8,17 +8,10 @@ modInfo moduleInfo = {"serverbrowsing","GameSpy ServerBrowsing server"};
 modLoadOptions servoptions;
 serverInfo server;
 bool do_db_check();
-void lockClientList(){
-	pthread_mutex_lock(&(server.locked_client_list));
-}
-void unlockClientList(){
-	pthread_mutex_unlock(&(server.locked_client_list));
-}
 int getnfds(fd_set *rset) {
-	lockClientList();
 	int hsock = 0;
 	Client *c;
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		c=*iterator;
 		int sock = c->getSocket();
@@ -26,7 +19,6 @@ int getnfds(fd_set *rset) {
 		FD_SET(sock,rset);
 		iterator++;
 	}
-	unlockClientList();
 	return hsock;
 }
 void checkPing(Client *c) {
@@ -35,10 +27,9 @@ void checkPing(Client *c) {
 	}
 }
 void processClients(fd_set *rset) {
-	lockClientList();
 	Client *c;
-	std::list <Client *> clist = server.client_list;
-	std::list<Client *>::iterator iterator=clist.begin();
+	boost::unordered_set <Client *> clist = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator=clist.begin();
 	while(iterator != clist.end()) {
 		c=*iterator;
 		checkPing(c);
@@ -47,7 +38,6 @@ void processClients(fd_set *rset) {
 			reallyDeleteClient(c);
 		iterator++;
 	}
-	unlockClientList();
 }
 void *openspy_mod_run(modLoadOptions *options)
 {
@@ -80,7 +70,6 @@ void *openspy_mod_run(modLoadOptions *options)
       < 0) return NULL;
     struct timeval timeout;
     memset(&timeout,0,sizeof(struct timeval));
-	pthread_mutex_init(&(server.locked_client_list),NULL);
     for(;;) {
 	int hsock;
 	FD_ZERO(&rset);
@@ -106,18 +95,14 @@ void *openspy_mod_run(modLoadOptions *options)
 		continue;
 	}
 	Client *c = new Client(sda,user);
-	lockClientList();
-	server.client_list.push_front(c);
-	unlockClientList();
+	server.client_list.insert(c);
 	//handleConnection(sda,&peer);
     }
-	pthread_mutex_destroy(&(server.locked_client_list));
 }
 void pushServer(sbPushMsg *msg) {
-	lockClientList();
 	Client *c;
-	std::list <Client *> * clist = &(server.client_list);
-	std::list<Client *>::iterator iterator=clist->begin();
+	boost::unordered_set <Client *> * clist = &(server.client_list);
+	boost::unordered_set<Client *>::iterator iterator=clist->begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
@@ -132,13 +117,11 @@ void pushServer(sbPushMsg *msg) {
 		}
 		iterator++;
 	}
-	unlockClientList();
 }
 void deleteServer(sbPushMsg *msg) {
-	lockClientList();
 	Client *c;
-	std::list <Client *> * clist = &(server.client_list);
-	std::list<Client *>::iterator iterator=clist->begin();
+	boost::unordered_set <Client *> * clist = &(server.client_list);
+	boost::unordered_set<Client *>::iterator iterator=clist->begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
@@ -153,7 +136,6 @@ void deleteServer(sbPushMsg *msg) {
 		}
 		iterator++;
 	}
-	unlockClientList();
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {
 	sbServerMsg *msg = (sbServerMsg *)data;
