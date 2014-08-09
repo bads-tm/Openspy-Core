@@ -2,6 +2,7 @@
 #define _INC_STRUCT
 #ifndef _JUST_STRUCTS
 #include "main.h"
+#include <boost/unordered_set.hpp>
 #endif
 #define MAX_NAME 64
 #define MAX_COMMENT 256
@@ -133,7 +134,7 @@ typedef struct {
 	Channel *chan;
 } inviteInfo;
 typedef struct {
-	std::list<Client *> client_list;
+	boost::unordered_set<Client *> client_list;
 	std::list<Channel *> chan_list;
 	std::list<userMode *> usermodes_list;
 	std::list <chanProps *> chanprops_list;

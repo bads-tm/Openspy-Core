@@ -8,7 +8,7 @@ serverInfo server;
 int getnfds(fd_set *rset) {
 	int hsock = 0;
 	Client *c;
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		c=*iterator;
 		int sock = c->getSocket();
@@ -25,8 +25,8 @@ void checkPing(Client *c) {
 }
 void processClients(fd_set *rset) {
 	Client *c;
-	std::list <Client *> clist = server.client_list;
-	std::list<Client *>::iterator iterator=clist.begin();
+	boost::unordered_set <Client *> clist = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator=clist.begin();
 	while(iterator != clist.end()) {
 		c=*iterator;
 		checkPing(c);
@@ -89,7 +89,7 @@ void *openspy_mod_run(modLoadOptions *options)
 		continue; //TODO: send database error message
 	}
 	Client *c = new Client(sda,(struct sockaddr_in *)&user);
-	server.client_list.push_front(c);
+	server.client_list.insert(c);
     }
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {

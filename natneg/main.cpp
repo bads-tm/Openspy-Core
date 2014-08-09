@@ -12,12 +12,12 @@ void handleConnection(int sd, struct sockaddr_in *peer, int instance, char *buff
 	Client *user = find_user(peer,0);
 	if(user == NULL) { //unregistered user, create
 		user = new Client(sd,peer,instance);
-		server.client_list.push_back(user);
+		server.client_list.insert(user);
 	}
 	user->handleIncoming(buff,len);
 }
 void checkTimeouts() {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;

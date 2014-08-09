@@ -5,7 +5,7 @@ void deleteClient(Client *client) {
 	client->deleteMe = true;
 }
 void reallyDeleteClient(Client *client) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		if(*iterator==client) {
@@ -17,7 +17,7 @@ void reallyDeleteClient(Client *client) {
 	}
 }
 Client *find_user(struct sockaddr_in *peer) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	Client *user;
 	struct sockaddr_in *userpeer;
 	iterator = server.client_list.begin();

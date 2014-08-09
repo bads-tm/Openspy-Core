@@ -2,9 +2,10 @@
 #define _INC_LS_STRUCTS
 #define MAX_BUFF 4096
 #include "main.h"
+#include <boost/unordered_set.hpp>
 class Client;
 typedef struct {
-	std::list<Client *> client_list;
+	boost::unordered_set<Client *> client_list;
 	modLoadOptions *options;
 	MYSQL *conn;
 }legacyStatsServer;

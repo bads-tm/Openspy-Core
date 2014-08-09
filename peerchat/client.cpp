@@ -128,7 +128,7 @@ bool Client::cmd_user(char *params) {
 	 return false;
  }
 bool Client::cmd_listopers(char *params) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *c;
 	while(iterator != server.client_list.end()) {
@@ -142,7 +142,7 @@ bool Client::cmd_listopers(char *params) {
 	 return true;
  }
 bool Client::cmd_listusers(char *params) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *c;
 	while(iterator != server.client_list.end()) {
@@ -1854,7 +1854,7 @@ bool Client::cmd_away(char *params) {
 	return true;
 }
 bool Client::cmd_lusers(char *params) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *c;
 	int numopers = 0,numusers = 0;

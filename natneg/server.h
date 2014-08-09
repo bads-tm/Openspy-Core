@@ -2,10 +2,11 @@
 #define _NN_SERVER_INC
 #include "main.h"
 #include "structs.h"
+#include <boost/unordered_set.hpp>
 class Client;
 typedef struct {
 	modLoadOptions *loadOptions;
-	std::list<Client *> client_list;	
+	boost::unordered_set<Client *> client_list;	
 } serverInfo;
 void deleteClient(Client *client);
 void reallyDeleteClient(Client *client);

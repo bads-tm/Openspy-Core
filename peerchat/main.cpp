@@ -23,8 +23,8 @@ void checkPing(Client *c) {
 }
 void processClients(fd_set *rset) {
 	Client *c;
-	std::list <Client *> clist = server.client_list;
-	std::list<Client *>::iterator iterator=clist.begin();
+	boost::unordered_set <Client *> clist = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator=clist.begin();
 		 while(iterator != clist.end()) {
 			c=*iterator;
 			checkPing(c);
@@ -37,8 +37,8 @@ void processClients(fd_set *rset) {
 int getnfds(fd_set *rset) {
 	int hsock = 0;
 	Client *c;
-	std::list <Client *> clist = server.client_list;
-	std::list<Client *>::iterator iterator=clist.begin();
+	boost::unordered_set <Client *> clist = server.client_list;
+	boost::unordered_set<Client *>::iterator iterator=clist.begin();
 		 while(iterator != clist.end()) {
 			c=*iterator;
 			int sock = c->getSocket();
@@ -328,7 +328,7 @@ void *openspy_mod_run(modLoadOptions *options)
 		param->server=&server;
 		memcpy(&param->peer,&peer,sizeof(struct sockaddr));
 		c=new Client(param);
-		server.client_list.push_back(c);
+		server.client_list.insert(c);
     }
    return NULL;
 }

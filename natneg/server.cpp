@@ -5,7 +5,7 @@ void deleteClient(Client *client) {
 	client->deleteMe = true;
 }
 void reallyDeleteClient(Client *client) {
-	std::list<Client *>::iterator iterator;
+	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		if(*iterator==client) {
@@ -17,7 +17,7 @@ void reallyDeleteClient(Client *client) {
 	}
 }
 Client *find_user(struct sockaddr_in *peer, int instance) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	struct sockaddr_in *userpeer;
 	while(iterator != server.client_list.end()) {
@@ -32,7 +32,7 @@ Client *find_user(struct sockaddr_in *peer, int instance) {
 }
 
 Client *find_user(uint32_t ip, uint16_t port, int instance) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
@@ -44,7 +44,7 @@ Client *find_user(uint32_t ip, uint16_t port, int instance) {
 	return NULL;
 }
 Client *find_user_by_cookie(int cookie, int instance) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
@@ -56,7 +56,7 @@ Client *find_user_by_cookie(int cookie, int instance) {
 	return NULL;
 }
 Client *find_user_by_cookie_index(int cookie, int instance, int index) {
-	std::list<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
