@@ -42,7 +42,7 @@ bool findNextValue(char **filter, char *dst, int dstlen) {
 	*filter = p+1;
 	return true;
 }
-bool filterMatches(uint8_t *filter, Client *server) {
+bool filterMatches(uint8_t *filter, boost::shared_ptr<Client> server) {
 	char variable[256];
 	char value[256];
 	char *result;

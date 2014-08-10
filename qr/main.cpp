@@ -9,12 +9,13 @@ serverInfo server;
 GeoIP *gi;
 #endif
 bool findMatchingServers(qrServerList *listData, char *sendmodule) {
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
-	Client *user;
+	if (server.client_list.empty()) return false;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::shared_ptr<Client> user;
 	serverList slist;
 	int i=0;
 	while(iterator != server.client_list.end()) {
-		user=*iterator;
+		user=*iterator++;
 		user->lockKeys();
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
@@ -27,15 +28,14 @@ bool findMatchingServers(qrServerList *listData, char *sendmodule) {
 		}
 		user->unlockKeys();
 		i++;	
-		iterator++;
 	}
 	listData->numServers = i;
 	return i != 0;
 }
 void findMatchingServers_GetRules(qrServerRules *rulesData, char *sendmodule) {
-	Client *user;
+	boost::shared_ptr<Client> user;
 	user = find_user(rulesData->ipaddr,rulesData->port);
-	if(user != NULL) {
+	if(user) {
 		//getRules allocates data which must be freed
 		rulesData->server_rules = user->getRules();
 		user->unlockKeys();
@@ -46,9 +46,9 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 	char *p = (char *)&send;
 	int blen = 0;
 	int slen = sizeof(sockaddr_in);
-	Client *user = find_user(si_other);
-	if(user == NULL) { //unregistered user, create
-		user = new Client(sd,si_other);
+	boost::shared_ptr<Client> user = find_user(si_other);
+	if(!user) { //unregistered user, create
+		user = boost::make_shared<Client>(sd,si_other);
 		server.client_list.insert(user);
 	}
 	user->handleIncoming(buff,len);
@@ -96,8 +96,8 @@ void *openspy_mod_run(modLoadOptions *options) {
 	return NULL;
 }
 void sendClientMessage(qrClientMsg *cmsg) {
-	Client *c = find_user(cmsg->toip,cmsg->toport);
-	if(c != NULL) {
+	boost::shared_ptr<Client> c = find_user(cmsg->toip,cmsg->toport);
+	if(c) {
 		c->sendMsg(cmsg->data,cmsg->len);
 		c->unlockKeys();
 	}
@@ -126,15 +126,13 @@ modInfo *openspy_modInfo() {
 	return &moduleInfo;
 }
 void checkTimeouts() {
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
-	Client *user;
+	if (server.client_list.empty()) return;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::shared_ptr<Client> user;
 	while(iterator != server.client_list.end()) {
-		user=*iterator;
-		if(time(NULL)-QR_PING_TIME > user->getLastPing()) {
+		user=*iterator++;
+		if(time(NULL)-QR_PING_TIME > user->getLastPing())
 			reallyDeleteClient(user);
-			iterator = server.client_list.begin();
-			continue;
-		}
-		iterator++;
+		if (server.client_list.empty()) return;
 	}
 }

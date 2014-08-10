@@ -5,16 +5,21 @@ void deleteClient(Client *client) {
 	client->deleteMe = true;
 }
 void reallyDeleteClient(Client *client) {
+/*
 	boost::unordered_set<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		if(*iterator==client) {
 			iterator = server.client_list.erase(iterator);
-			delete client;
+*/
+	server.client_list.erase(client);
+	delete client;
+/*
 		} else
 		iterator++;
 
 	}
+*/
 }
 Client *find_user(struct sockaddr_in *peer, int instance) {
 	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();

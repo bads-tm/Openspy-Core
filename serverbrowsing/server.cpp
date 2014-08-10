@@ -4,37 +4,30 @@
 #include <qr/structs.h>
 #include "structs.h"
 extern serverInfo server;
-void deleteClient(Client *client) {
+void deleteClient(Client* client) {
 	client->deleteMe = true;
 }
-void reallyDeleteClient(Client *client) {
-	boost::unordered_set<Client *>::iterator iterator;
-	iterator=server.client_list.begin();
-	while(iterator != server.client_list.end()) {
-		if(*iterator==client) {
-			iterator = server.client_list.erase(iterator);
-			delete client;
-		} else
-		iterator++;
-
-	}
+void reallyDeleteClient(boost::shared_ptr<Client> client) {
+	if (server.client_list.empty()) return;
+	server.client_list.erase(client);
 }
-Client *find_user(struct sockaddr_in *peer) {
-	boost::unordered_set<Client *>::iterator iterator;
-	Client *user;
+boost::shared_ptr<Client> find_user(struct sockaddr_in *peer) {
+	boost::shared_ptr<Client> none;
+	if (server.client_list.empty()) return none;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator;
+	boost::shared_ptr<Client> user;
 	struct sockaddr_in *userpeer;
 	iterator = server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		user=*iterator;
+		user=*iterator++;
 		userpeer = user->getSockAddr();
 		if((userpeer->sin_addr.s_addr == peer->sin_addr.s_addr) && (userpeer->sin_port == peer->sin_port)) {
 			return user;
 		}
-		iterator++;
 	}
-	return NULL;
+	return none;
 }
-Client *find_user(uint32_t ip, uint16_t port) {
+boost::shared_ptr<Client> find_user(uint32_t ip, uint16_t port) {
 	struct sockaddr_in peer;
 	peer.sin_addr.s_addr = ip;
 	peer.sin_port = port;

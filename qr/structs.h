@@ -23,6 +23,8 @@
 #define REGIONID_MIDDLE_EAST 1048576
 #define REGIONID_SOUTH_EAST_EUROPE 2097152
 #define REGIONID_WESTERN_EUROPE 4194304
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/unordered_set.hpp>
 class Client;
 enum {
@@ -39,7 +41,7 @@ typedef struct {
 	int index; //player 0, team 0, etc
 } indexedKey;
 typedef struct {
-	boost::unordered_set<Client *> client_list;	
+	boost::unordered_set< boost::shared_ptr<Client> > client_list;	
 } serverInfo;
 typedef struct {
 	const char *countrycode;
