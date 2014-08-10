@@ -52,6 +52,7 @@ class Client {
 		customKey *findKey(char *name);
 		time_t connecttime;
 		time_t lastPing;
+		time_t statSent;
 		uint8_t instancekey[REQUEST_KEY_LEN]; //used by gamespy to prevent UDP packet spoofing
 		char challenge[CHALLENGE_LEN + 1];
 		int sd;
