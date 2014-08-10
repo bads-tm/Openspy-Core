@@ -9,34 +9,34 @@ modLoadOptions servoptions;
 serverInfo server;
 bool do_db_check();
 int getnfds(fd_set *rset) {
+	if (server.client_list.empty()) return 0;
 	int hsock = 0;
-	Client *c;
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
+	boost::shared_ptr<Client> c;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		c=*iterator;
+		c=*iterator++;
 		int sock = c->getSocket();
 		if(sock > hsock) hsock = sock;
 		FD_SET(sock,rset);
-		iterator++;
 	}
 	return hsock;
 }
-void checkPing(Client *c) {
+void checkPing(boost::shared_ptr<Client> c) {
 	if(time(NULL)-SB_TIMEOUT_TIME > c->getLastPing()) {
 		shutdown(c->getSocket(),SHUT_RDWR);
 	}
 }
 void processClients(fd_set *rset) {
-	Client *c;
-	boost::unordered_set <Client *> clist = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator=clist.begin();
-	while(iterator != clist.end()) {
-		c=*iterator;
+	if (server.client_list.empty()) return;
+	boost::shared_ptr<Client> c;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	while(iterator != server.client_list.end()) {
+		c=*iterator++;
 		checkPing(c);
 		c->processConnection(rset);
 		if(c->deleteMe)
 			reallyDeleteClient(c);
-		iterator++;
+		if (server.client_list.empty()) return;
 	}
 }
 void *openspy_mod_run(modLoadOptions *options)
@@ -94,47 +94,45 @@ void *openspy_mod_run(modLoadOptions *options)
 		close(sd);
 		continue;
 	}
-	Client *c = new Client(sda,user);
+	boost::shared_ptr<Client> c = boost::make_shared<Client>(sda,user);
 	server.client_list.insert(c);
 	//handleConnection(sda,&peer);
     }
 }
 void pushServer(sbPushMsg *msg) {
-	Client *c;
-	boost::unordered_set <Client *> * clist = &(server.client_list);
-	boost::unordered_set<Client *>::iterator iterator=clist->begin();
+	if (server.client_list.empty()) return;
+	boost::shared_ptr<Client> c;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
-	while(iterator != clist->end()) {
-		c=*iterator;
+	while(iterator != server.client_list.end()) {
+		c=*iterator++;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
 				c->pushServer(slist);
 			}
 		}
-		iterator++;
 	}
 }
 void deleteServer(sbPushMsg *msg) {
-	Client *c;
-	boost::unordered_set <Client *> * clist = &(server.client_list);
-	boost::unordered_set<Client *>::iterator iterator=clist->begin();
+	if (server.client_list.empty()) return;
+	boost::shared_ptr<Client> c;
+	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
-	while(iterator != clist->end()) {
-		c=*iterator;
+	while(iterator != server.client_list.end()) {
+		c=*iterator++;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
 				c->delServer(slist);
 			}
 		}
-		iterator++;
 	}
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {
