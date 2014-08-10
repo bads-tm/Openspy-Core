@@ -30,6 +30,8 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	#endif
 	country = findCountryByName(code);
 	legacyQuery = false;
+	lastPing = connecttime;
+	statSent = 0;
 }
 void Client::handleLegacyIncoming(char *buff, int len) {
 	char type[128] = { 0 };
@@ -151,12 +153,15 @@ void Client::handleLegacyHeartbeat(char *buff,int len) {
 //		pushServer();
 		serverRegistered = true;
 	}
-	uint32_t blen = 0;
-	uint8_t buffer[24] = { 0 };
-	uint8_t *p = (uint8_t *)&buffer;
-	BufferWriteNTS((uint8_t**)&p,(uint32_t *)&blen,(uint8_t *)"\\status\\");
-	blen--; //we don't want the null byte
-	sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
+	if((lastPing - statSent) >= 10) {
+		statSent = lastPing;
+		uint32_t blen = 0;
+		uint8_t buffer[24] = { 0 };
+		uint8_t *p = (uint8_t *)&buffer;
+		BufferWriteNTS((uint8_t**)&p,(uint32_t *)&blen,(uint8_t *)"\\status\\");
+		blen--; //we don't want the null byte
+		sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
+	}
 }
 void Client::handleHeartbeat(char *buff, int len) {
 	char buffer[MAX_DATA_SIZE] = { 0 };
