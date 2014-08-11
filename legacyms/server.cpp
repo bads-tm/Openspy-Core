@@ -16,7 +16,8 @@ boost::shared_ptr<Client> find_user(struct sockaddr_in *peer) {
 	struct sockaddr_in *userpeer;
 	iterator = server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		user=*iterator++;
+		user=*iterator;
+		++iterator;
 		userpeer = user->getSockAddr();
 		if((userpeer->sin_addr.s_addr == peer->sin_addr.s_addr) && (userpeer->sin_port == peer->sin_port)) {
 			return user;

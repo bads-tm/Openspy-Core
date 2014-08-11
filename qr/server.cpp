@@ -250,7 +250,8 @@ boost::shared_ptr<Client> find_user(struct sockaddr_in *peer) {
 	boost::shared_ptr<Client> user;
 	struct sockaddr_in *userpeer;
 	while(iterator != server.client_list.end()) {
-		user=*iterator++;
+		user=*iterator;
+		++iterator;
 		userpeer = user->getSockAddr();
 		if((userpeer->sin_addr.s_addr == peer->sin_addr.s_addr) && (userpeer->sin_port == peer->sin_port)) {
 			return user;
@@ -265,7 +266,8 @@ boost::shared_ptr<Client> find_user(uint32_t ip, uint16_t port) {
 	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	boost::shared_ptr<Client> user;
 	while(iterator != server.client_list.end()) {
-		user=*iterator++;
+		user=*iterator;
+		++iterator;
 		user->lockKeys();
 		if(user->getServerAddress() == ip && user->getServerPort() == port) {
 			return user;

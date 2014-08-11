@@ -11,7 +11,8 @@ int getnfds(fd_set *rset) {
 	boost::shared_ptr<Client> c;
 	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		c=*iterator++;
+		c=*iterator;
+		++iterator;
 		int sock = c->getSocket();
 		if(sock > hsock) hsock = sock;
 		FD_SET(sock,rset);
@@ -28,7 +29,8 @@ void processClients(fd_set *rset) {
 	boost::shared_ptr<Client> c;
 	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		c=*iterator++;
+		c=*iterator;
+		++iterator;
 		checkPing(c);
 		c->processConnection(rset);
 		if(c->deleteMe)
