@@ -14,7 +14,8 @@ int getnfds(fd_set *rset) {
 	boost::shared_ptr<Client> c;
 	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		c=*iterator++;
+		c=*iterator;
+		++iterator;
 		int sock = c->getSocket();
 		if(sock > hsock) hsock = sock;
 		FD_SET(sock,rset);
@@ -31,7 +32,8 @@ void processClients(fd_set *rset) {
 	boost::shared_ptr<Client> c;
 	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		c=*iterator++;
+		c=*iterator;
+		++iterator;
 		checkPing(c);
 		c->processConnection(rset);
 		if(c->deleteMe)
@@ -109,7 +111,8 @@ void pushServer(sbPushMsg *msg) {
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
 	while(iterator != server.client_list.end()) {
-		c=*iterator++;
+		c=*iterator;
+		++iterator;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
 				c->pushServer(slist);
@@ -127,7 +130,8 @@ void deleteServer(sbPushMsg *msg) {
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
 	while(iterator != server.client_list.end()) {
-		c=*iterator++;
+		c=*iterator;
+		++iterator;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
 				c->delServer(slist);

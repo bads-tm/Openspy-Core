@@ -15,7 +15,8 @@ bool findMatchingServers(qrServerList *listData, char *sendmodule) {
 	serverList slist;
 	int i=0;
 	while(iterator != server.client_list.end()) {
-		user=*iterator++;
+		user=*iterator;
+		++iterator;
 		user->lockKeys();
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
@@ -130,7 +131,8 @@ void checkTimeouts() {
 	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	boost::shared_ptr<Client> user;
 	while(iterator != server.client_list.end()) {
-		user=*iterator++;
+		user=*iterator;
+		++iterator;
 		if(time(NULL)-QR_PING_TIME > user->getLastPing())
 			reallyDeleteClient(user);
 		if (server.client_list.empty()) return;
