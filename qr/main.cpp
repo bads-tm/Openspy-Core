@@ -9,14 +9,14 @@ serverInfo server;
 GeoIP *gi;
 #endif
 bool findMatchingServers(qrServerList *listData, char *sendmodule) {
-	if (server.client_list.empty()) return false;
-	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	boost::shared_ptr<Client> user;
 	serverList slist;
 	int i=0;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
 		++iterator;
+		if(!user) continue;
 		user->lockKeys();
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
@@ -50,7 +50,12 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 	boost::shared_ptr<Client> user = find_user(si_other);
 	if(!user) { //unregistered user, create
 		user = boost::make_shared<Client>(sd,si_other);
-		server.client_list.insert(user);
+		boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+		for(;;) {
+			if(iterator == server.client_list.end()) { server.client_list.push_back(user); break; }
+			else if(!*iterator) { *iterator = user; break; }
+			else ++iterator;
+		}
 	}
 	user->handleIncoming(buff,len);
 	if(user->deleteMe)
@@ -127,14 +132,13 @@ modInfo *openspy_modInfo() {
 	return &moduleInfo;
 }
 void checkTimeouts() {
-	if (server.client_list.empty()) return;
-	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	boost::shared_ptr<Client> user;
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
 		++iterator;
+		if(!user) continue;
 		if(time(NULL)-QR_PING_TIME > user->getLastPing())
 			reallyDeleteClient(user);
-		if (server.client_list.empty()) return;
 	}
 }
