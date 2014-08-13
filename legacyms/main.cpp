@@ -6,13 +6,13 @@ modInfo moduleInfo = {"legacyms","GameSpy Legacy Master Server"};
 modLoadOptions servoptions;
 serverInfo server;
 int getnfds(fd_set *rset) {
-	if (server.client_list.empty()) return 0;
 	int hsock = 0;
 	boost::shared_ptr<Client> c;
-	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		c=*iterator;
 		++iterator;
+		if(!c) continue;
 		int sock = c->getSocket();
 		if(sock > hsock) hsock = sock;
 		FD_SET(sock,rset);
@@ -25,17 +25,16 @@ void checkPing(boost::shared_ptr<Client> c) {
 	}
 }
 void processClients(fd_set *rset) {
-	if (server.client_list.empty()) return;
 	boost::shared_ptr<Client> c;
-	boost::unordered_set< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		c=*iterator;
 		++iterator;
+		if(!c) continue;
 		checkPing(c);
 		c->processConnection(rset);
 		if(c->deleteMe)
 			reallyDeleteClient(c);
-		if (server.client_list.empty()) return;
 	}
 }
 void *openspy_mod_run(modLoadOptions *options)
@@ -91,7 +90,12 @@ void *openspy_mod_run(modLoadOptions *options)
 		continue; //TODO: send database error message
 	}
 	boost::shared_ptr<Client> c = boost::make_shared<Client>(sda,(struct sockaddr_in *)&user);
-	server.client_list.insert(c);
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	for(;;) {
+		if(iterator == server.client_list.end()) { server.client_list.push_back(c); break; }
+		else if(!*iterator) { *iterator = c; break; }
+		else ++iterator;
+	}
     }
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {
