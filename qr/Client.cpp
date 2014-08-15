@@ -570,6 +570,9 @@ bool Client::isServerRegistered() {
 void Client::lockKeys() {
 	pthread_mutex_lock(&lockedKeys);
 }
+bool Client::tryLockKeys() {
+	return pthread_mutex_trylock(&lockedKeys) == 0;
+}
 void Client::unlockKeys() {
 	pthread_mutex_unlock(&lockedKeys);
 }
