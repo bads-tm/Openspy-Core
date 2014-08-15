@@ -35,7 +35,7 @@ void Client::processConnection(fd_set *rset) {
 //	makeStringSafe((char *)&buf, sizeof(buf));
 	/*
 	if(len == -1 && time(NULL)-120 > lastKeepAlive) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	} else if(len == -1) { //timeout, send keep-alive
 		char *p = (char *)&buf;
@@ -43,11 +43,11 @@ void Client::processConnection(fd_set *rset) {
 		BufferWriteByte((uint8_t**)&p,(uint32_t *)&len,KEEPALIVE_MESSAGE);
 		enctypex_func6e((unsigned char *)&encxkeyb,(unsigned char *)p,len);
 		if(send(sd,buf,len,MSG_NOSIGNAL) < 0) {
-			deleteClient(this);
+			deleteMe = true;
 			return;
 		}		
 	} else*/ if(len==0 || len == -1) { //disconnected
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	char *p = (char *)&buf;	
@@ -196,7 +196,7 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)&errmsg);
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		return len;
 	} else if(queryGame != NULL && queryGame->servicesdisabled != 0) {
 		uint8_t *buff,*p;
@@ -218,7 +218,7 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)&errmsg);
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		return len;
 	}
 	this->options = options;
@@ -245,7 +245,7 @@ void Client::sendIP() {
 		BufferWriteNTS(&buff, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)buff,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -277,14 +277,14 @@ void Client::sendGroups() {
 		BufferWriteNTS(&buff, &len, (uint8_t *)"Database Error: Database Connection Lost");
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -304,7 +304,7 @@ void Client::sendGroups() {
 	if (mysql_query(conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
 		free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	bool hasMaxServers = maxservers != 0;
@@ -386,9 +386,10 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, 
 }
 char *Client::findServerValue(char *name,serverList list) {
 	std::list<customKey *>::iterator skeys = list.serverKeys.begin();
+	std::list<customKey *>::iterator end = list.serverKeys.end();
 	customKey *key;
 	if(name == NULL) return NULL;
-	while(skeys != list.serverKeys.end()) {
+	while(skeys != end) {
 		key = *skeys;
 		if(key != NULL) {
 			if(key->name != NULL) {
@@ -484,7 +485,7 @@ void Client::sendServers() {
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&p, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)buff,len,MSG_NOSIGNAL);
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -508,10 +509,11 @@ void Client::sendServers() {
 	msg.msgID = EQRMsgID_GetServer;
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
+	std::list<serverList>::iterator end = listData.server_list.end();
 	serverList slist;
 	bool hasMaxServers = maxservers != 0;
 	int maxservers = this->maxservers;
-	while(iterator != listData.server_list.end() ) {
+	while(iterator != end ) {
 		slist = *iterator;
 		if( (!hasMaxServers || (maxservers && maxservers--)) && (listData.numServers && listData.numServers--)) {
 			addServerBuff((char**)&p,(int *)&len,slist);
@@ -577,7 +579,7 @@ int Client::handleInfoRequest(uint8_t *buff, uint32_t len) {
 	return len;
 }
 void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, uint16_t port) {
-	std::list<customKey *>::iterator it;
+	std::list<customKey *>::iterator it, end;
 	size_t outbuffsize = 4096;
 	uint8_t* outbuff = (uint8_t*)calloc(1,outbuffsize);
 	uint8_t *p,*x;
@@ -593,7 +595,7 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 		BufferWriteNTS(&p, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)outbuff,len,MSG_NOSIGNAL);
 		//free((void *)p);
-		deleteClient(this);
+		deleteMe = true;
 		free(outbuff);
 		return;
 	}
@@ -652,7 +654,8 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 	BufferWriteInt(&p,&len,ip);	
 //	printf("sendServerRules %#x %#x %s %s %u %u",ip,port,game->name,queryGame->name,server_rules.size(),slist.serverKeys.size());
 	it = server_rules.begin();
-	while(it != server_rules.end()) {
+	end = server_rules.end();
+	while(it != end) {
 		key = *it;
 		size_t newstuff = strlen(key->name) + strlen(key->value);
 		if((p - x + newstuff) > (outbuffsize / 2)) {
@@ -680,10 +683,11 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 	free(outbuff);
 }
 void Client::freeServerRuleList(std::list<customKey *> slist) {
-	std::list<customKey *>::iterator it;
+	std::list<customKey *>::iterator it, end;
 	customKey *key;
 	it = slist.begin();
-	while(it != slist.end()) {
+	end = slist.end();
+	while(it != end) {
 		key = *it;
 		if(key->name != NULL) free((void *)key->name);
 		if(key->value != NULL) free((void *)key->value);
@@ -845,9 +849,10 @@ int Client::getNumberOfServers(uint16_t groupid) {
 	msg.msgID = EQRMsgID_GetServer;
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
+	std::list<serverList>::iterator end = listData.server_list.end();
 	int i = 0;
 	serverList slist;
-	while(iterator != listData.server_list.end() ) {
+	while(iterator != end ) {
 		slist = *iterator;
 		freeServerRuleList(slist.serverKeys);
 		if( listData.numServers && listData.numServers--) i++;

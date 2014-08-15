@@ -10,10 +10,11 @@ GeoIP *gi;
 #endif
 bool findMatchingServers(qrServerList *listData, char *sendmodule) {
 	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
 	boost::shared_ptr<Client> user;
 	serverList slist;
 	int i=0;
-	while(iterator != server.client_list.end()) {
+	while(iterator != end) {
 		user=*iterator;
 		++iterator;
 		if(!(user && user->tryLockKeys())) continue;
@@ -46,19 +47,19 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 	char *p = (char *)&send;
 	int blen = 0;
 	int slen = sizeof(sockaddr_in);
-	boost::shared_ptr<Client> user = find_user(si_other);
-	if(!user) { //unregistered user, create
+	boost::shared_ptr<Client> user;
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=find_user(si_other);
+	if(iterator == end) { //unregistered user, create
 		user = boost::make_shared<Client>(sd,si_other);
-		boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-		for(;;) {
-			if(iterator == server.client_list.end()) { server.client_list.push_back(user); break; }
-			else if(!*iterator) { *iterator = user; break; }
-			else ++iterator;
-		}
-	}
+		server.client_list.push_back(user);
+	} else if(!*iterator) {
+		user = boost::make_shared<Client>(sd,si_other);
+		*iterator = user;
+	} else user = *iterator;
 	user->handleIncoming(buff,len);
 	if(user->deleteMe)
-		reallyDeleteClient(user);
+		iterator->reset();
 	
 }
 void *openspy_mod_run(modLoadOptions *options) {
@@ -132,12 +133,14 @@ modInfo *openspy_modInfo() {
 }
 void checkTimeouts() {
 	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
 	boost::shared_ptr<Client> user;
-	while(iterator != server.client_list.end()) {
+	time_t timotim = time(NULL)-QR_PING_TIME;
+	while(iterator != end) {
 		user=*iterator;
+		if(!user) { ++iterator; continue; }
+		if(timotim > user->getLastPing())
+			iterator->reset();
 		++iterator;
-		if(!user) continue;
-		if(time(NULL)-QR_PING_TIME > user->getLastPing())
-			reallyDeleteClient(user);
 	}
 }

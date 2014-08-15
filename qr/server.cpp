@@ -236,40 +236,35 @@ countryRegion countries[] = {
 							{"ZZ","Unknown",0},
 							};
 extern serverInfo server;
-void deleteClient(Client* client) {
-	client->deleteMe = true;
-}
-void reallyDeleteClient(boost::shared_ptr<Client> client) {
+boost::container::stable_vector< boost::shared_ptr<Client> >::iterator find_user(struct sockaddr_in *peer) {
 	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	while(iterator != server.client_list.end()) {
-		if(*iterator == client) { iterator->reset(); return; }
-		++iterator;
-	}
-}
-boost::shared_ptr<Client> find_user(struct sockaddr_in *peer) {
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::shared_ptr<Client> user, none;
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator unusedSpot=end;
+	boost::shared_ptr<Client> user;
 	struct sockaddr_in *userpeer;
-	while(iterator != server.client_list.end()) {
+	time_t timotim = time(NULL)-QR_PING_TIME;
+	while(iterator != end) {
 		user=*iterator;
-		++iterator;
-		if(!user) continue;
-		if(time(NULL)-QR_PING_TIME > user->getLastPing()) {
-			reallyDeleteClient(user);
+		if(!user) { if(unusedSpot==end) unusedSpot=iterator; ++iterator; continue; }
+		if(timotim > user->getLastPing()) {
+			iterator->reset();
+			++iterator;
 			continue;
 		}
 		userpeer = user->getSockAddr();
 		if((userpeer->sin_addr.s_addr == peer->sin_addr.s_addr) && (userpeer->sin_port == peer->sin_port)) {
-			return user;
+			return iterator;
 		}
+		++iterator;
 	}
-	return none;
+	return unusedSpot;
 }
 
 boost::shared_ptr<Client> find_user(uint32_t ip, uint16_t port) {
 	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
+	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
 	boost::shared_ptr<Client> user, none;
-	while(iterator != server.client_list.end()) {
+	while(iterator != end) {
 		user=*iterator;
 		++iterator;
 		if(!(user && user->tryLockKeys())) continue;

@@ -57,7 +57,7 @@ void Client::processConnection(fd_set *rset) {
 	}
 	len = recv(sd,buf,sizeof(buf),MSG_NOSIGNAL);
 	if(len == 0 || len == -1) { //disconnected
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(!do_db_check()) {
@@ -135,13 +135,13 @@ void Client::handleValidation(uint8_t *buff,uint32_t len) {
 	char gamename[64];
 	enctype = find_paramint("enctype",(char *)buff);
 	if(enctype < 0 || enctype > 2) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	} 
 	find_param("gamename",(char *)buff, (char *)&gamename,sizeof(gamename));
 	game = servoptions.gameInfoNameProc((char *)gamename);
 	if (game == NULL) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	find_param("validate",(char *)buff,(char *)&validation,sizeof(validation));
@@ -149,7 +149,7 @@ void Client::handleValidation(uint8_t *buff,uint32_t len) {
 	if(strcmp(realvalidate,validation) == 0 && game != NULL && game->servicesdisabled == 0) {
 		validated = true;
 	} else {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(enctype != 0){
@@ -183,7 +183,7 @@ void Client::handleList(uint8_t *buff,uint32_t len) {
 	} else {
 		sendServers(queryGame,hasFilter==true?((char *)&filter):NULL,true);
 	}
-	deleteClient(this);//appearently the server immidently terminates the connection
+	deleteMe = true;//appearently the server immidently terminates the connection
 }
 int getPeerchatUsers(int groupid) {
 	int retval;
@@ -218,7 +218,7 @@ void Client::sendGroups(gameInfo *queryGame) {
 	sprintf_s(query,sizeof(query),"SELECT `groupid`,`name`,`maxwaiting`,`password`,`other` FROM `Gamemaster`.`grouplist` WHERE `gameid` = '%d'",queryGame->id);
 	if (mysql_query(conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	senddata(fielddata,strlen(fielddata),false,false);
@@ -257,12 +257,13 @@ void Client::sendServers(gameInfo *queryGame, char *filter, bool basic) {
 	msg.msgID = EQRMsgID_GetServer;
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
+	std::list<serverList>::iterator end = listData.server_list.end();
 	serverList slist;
 	if (basic) {
 		len = sprintf_s(bbuff,sizeof(bbuff),"\\basic\\");
 		senddata((char *)&bbuff,len,false,false);
 	}
-	while(iterator != listData.server_list.end()) {
+	while(iterator != end) {
 		slist = *iterator;
 		if (basic) {
 			len = sprintf_s(bbuff,sizeof(bbuff),"\\ip\\%s:%d",inet_ntoa((struct in_addr){slist.ipaddr}),ntohs(slist.port));
@@ -281,10 +282,11 @@ void Client::sendServers(gameInfo *queryGame, char *filter, bool basic) {
 	
 }
 void Client::freeServerRuleList(std::list<customKey *> slist) {
-	std::list<customKey *>::iterator it;
+	std::list<customKey *>::iterator it, end;
 	customKey *key;
 	it = slist.begin();
-	while(it != slist.end()) {
+	end = slist.end();
+	while(it != end) {
 		key = *it;
 		if(key->name != NULL) free((void *)key->name);
 		if(key->value != NULL) free((void *)key->value);
