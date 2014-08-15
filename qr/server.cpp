@@ -242,7 +242,7 @@ void deleteClient(Client* client) {
 void reallyDeleteClient(boost::shared_ptr<Client> client) {
 	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
-		if(*iterator == client) iterator->reset();
+		if(*iterator == client) { iterator->reset(); return; }
 		++iterator;
 	}
 }
