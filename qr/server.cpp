@@ -254,6 +254,10 @@ boost::shared_ptr<Client> find_user(struct sockaddr_in *peer) {
 		user=*iterator;
 		++iterator;
 		if(!user) continue;
+		if(time(NULL)-QR_PING_TIME > user->getLastPing()) {
+			reallyDeleteClient(user);
+			continue;
+		}
 		userpeer = user->getSockAddr();
 		if((userpeer->sin_addr.s_addr == peer->sin_addr.s_addr) && (userpeer->sin_port == peer->sin_port)) {
 			return user;
