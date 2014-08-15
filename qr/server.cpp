@@ -268,8 +268,7 @@ boost::shared_ptr<Client> find_user(uint32_t ip, uint16_t port) {
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
 		++iterator;
-		if(!user) continue;
-		user->lockKeys();
+		if(!(user && user->tryLockKeys())) continue;
 		if(user->getServerAddress() == ip && user->getServerPort() == port) {
 			return user;
 		}

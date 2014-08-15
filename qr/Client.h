@@ -35,6 +35,7 @@ class Client {
 		countryRegion *getCountry();
 		bool deleteMe;
 		void lockKeys();
+		bool tryLockKeys();
 		void unlockKeys();
 	private:
 		void handleServerData(char *buff, int len);

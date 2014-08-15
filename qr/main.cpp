@@ -16,8 +16,7 @@ bool findMatchingServers(qrServerList *listData, char *sendmodule) {
 	while(iterator != server.client_list.end()) {
 		user=*iterator;
 		++iterator;
-		if(!user) continue;
-		user->lockKeys();
+		if(!(user && user->tryLockKeys())) continue;
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
 				slist.serverKeys = user->copyServerKeys();
