@@ -50,7 +50,7 @@ void Client::handleLegacyIncoming(char *buff, int len) {
 void Client::handleIncoming(char *buff, int len) {
 	lastPing = time(NULL);//treat anything as a ping response
 	if(len < 3) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(!legacyQuery && buff[0] == '\\') {
@@ -143,7 +143,7 @@ void Client::handleServerData(char *buff, int len) {
 	}
 	unlockKeys();
 	if(getStateChanged() == 2) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 }
@@ -247,7 +247,8 @@ void Client::handleHeartbeat(char *buff, int len) {
 			}
 		}
 		std::deque<uint8_t *>::iterator iterator = nameValueList.begin();
-		while(iterator != nameValueList.end()) {
+		std::deque<uint8_t *>::iterator end = nameValueList.end();
+		while(iterator != end) {
 			free((void *)*iterator);
 			iterator++;
 		}
@@ -256,16 +257,16 @@ void Client::handleHeartbeat(char *buff, int len) {
 	if(getGameInfo() == NULL) {
 		game = servoptions.gameInfoNameProc(findServerValue("gamename"));
 		if(game == NULL) { 
-			deleteClient(this);
+			deleteMe = true;
 			return;
 		}
 	}
 	if(game->servicesdisabled != 0) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(getStateChanged() == 2) {
-		deleteClient(this);
+		deleteMe = true;
 		return;
 	}
 	if(!sentChallenge) {
@@ -362,7 +363,8 @@ void Client::clearKeys() {
 customKey *Client::findKey(char *name) {
 	customKey *key;
 	std::list<customKey *>::iterator iterator = serverKeys.begin();
-	while(iterator != serverKeys.end()) {
+	std::list<customKey *>::iterator end = serverKeys.end();
+	while(iterator != end) {
 		key = *iterator;
 		if(key->name != NULL) {
 			if(strcmp(key->name,name) == 0) {
@@ -375,8 +377,9 @@ customKey *Client::findKey(char *name) {
 }
 char *Client::findServerValue(char *name) {
 	static char regionbuff[16] = { 0 };
-	std::list<customKey *>::iterator iterator;
+	std::list<customKey *>::iterator iterator, end;
 	iterator=serverKeys.begin();
+	end=serverKeys.end();
 	customKey *key;
 	if(stricmp(name,"country") == 0) {
 		return (char *)country->countrycode;
@@ -388,7 +391,7 @@ char *Client::findServerValue(char *name) {
 			return getGameInfo()->name;
 		}
 	}
-	while(iterator != serverKeys.end()) {
+	while(iterator != end) {
 		key = *iterator;
 		if(key->name != NULL) {
 			if(strcmp(key->name,name) == 0) {
@@ -411,12 +414,13 @@ std::list<customKey *> Client::getServerKeys() {
 }
 std::list<customKey *> Client::getRules() {
 	std::list<customKey *> rules;
-	std::list<customKey *>::iterator iterator;
-	std::list<indexedKey *>::iterator it2;
+	std::list<customKey *>::iterator iterator, end;
+	std::list<indexedKey *>::iterator it2, end2;
 	iterator=serverKeys.begin();
+	end=serverKeys.end();
 	customKey *key,*key2;
 	indexedKey *ikey;
-	while(iterator != serverKeys.end()) {
+	while(iterator != end) {
 		key = *iterator;
 		if(key == NULL || key->name == NULL || key->value == NULL) {
 			iterator++;
@@ -431,7 +435,8 @@ std::list<customKey *> Client::getRules() {
 		iterator++;
 	}
 	it2 = playerKeys.begin();
-	while(it2 != playerKeys.end()) {
+	end2 = playerKeys.end();
+	while(it2 != end2) {
 		ikey = *it2;
 		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) {
 			it2++;
@@ -446,7 +451,8 @@ std::list<customKey *> Client::getRules() {
 		it2++;
 	}
 	it2 = teamKeys.begin();
-	while(it2 != teamKeys.end()) {
+	end2 = teamKeys.end();
+	while(it2 != end2) {
 		ikey = *it2;
 		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) {
 			it2++;
@@ -464,10 +470,11 @@ std::list<customKey *> Client::getRules() {
 }
 std::list<customKey *> Client::copyServerKeys() {
 	std::list<customKey *> rules;
-	std::list<customKey *>::iterator iterator;
+	std::list<customKey *>::iterator iterator, end;
 	iterator=serverKeys.begin();
+	end=serverKeys.end();
 	customKey *key,*key2;
-	while(iterator != serverKeys.end()) {
+	while(iterator != end) {
 		key = *iterator;
 		if(key != NULL && key->name != NULL && key->value != NULL) {
 			key2 = (customKey *)calloc(1,sizeof(customKey));
