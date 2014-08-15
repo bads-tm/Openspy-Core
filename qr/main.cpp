@@ -90,8 +90,8 @@ void *openspy_mod_run(modLoadOptions *options) {
     tv.tv_usec = 0;
     setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,  sizeof tv);
     len = recvfrom(sd,(char *)&buf,sizeof(buf), 0, (struct sockaddr *)&si_other, &slen);
-    checkTimeouts();
     if(len < 0) { //timeout, do keep alives and delete clients who have expired
+	checkTimeouts();
 	continue;
     }
     buf[len] = 0;
