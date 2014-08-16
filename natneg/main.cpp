@@ -18,39 +18,43 @@ void handleConnection(int sd, struct sockaddr_in *peer, int instance, char *buff
 }
 void checkTimeouts() {
 	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
+	boost::unordered_set<Client *>::iterator end=server.client_list.end();
 	Client *user;
-	while(iterator != server.client_list.end()) {
+	time_t now = time(NULL);
+	time_t timotim = now-NN_PING_TIME;
+	time_t timofiv = now-5;
+	time_t timoded = now-NN_DEADBEAT_TIME;
+	while(iterator != end) {
 		user=*iterator;
-		if(time(NULL)-NN_PING_TIME > user->getLastPacket()) {
+		++iterator;
+		if(timotim > user->getLastPacket())
 			reallyDeleteClient(user);
-			iterator = server.client_list.begin();
-			continue;
-		}
-		iterator++;
 	}
 	iterator=server.client_list.begin();
-	while(iterator != server.client_list.end()) {
+	end=server.client_list.end();
+	while(iterator != end) {
 		user = *iterator;
+		++iterator;
 		if(user->getConnected()) {
 			if(!user->getConnectedAck()) {
 				if(user->getSendConnectTime()) {
-					if(time(NULL)-5 > user->getSendConnectTime()) {
+					if(timofiv > user->getSendConnectTime()) {
 						user->trySendConnect(false);
 					}
 				}
 			}
 		}
-		iterator++;
 	}
 	iterator=server.client_list.begin();
-	while(iterator != server.client_list.end()) {
+	end=server.client_list.end();
+	while(iterator != end) {
 		user=*iterator;
-		if(time(NULL)-NN_DEADBEAT_TIME > user->getConnectTime()) {
+		++iterator;
+		if(timoded > user->getConnectTime()) {
 			if(!user->getConnected()) {
 				user->sendDeadBeatNotice();
 			}
 		}
-		iterator++;
 	}
 }
 int getnfds(fd_set *rset, int *sockets, int num_instances) {
