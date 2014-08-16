@@ -22,6 +22,7 @@ Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 Client::~Client() {
 }
 void Client::handleIncoming(char *buff, int len) {
+	if(deleteMe) return;
 	NatNegPacket *packet = (NatNegPacket *)(buff);
 	if(memcmp(packet->magic, NNMagicData, NATNEG_MAGIC_LEN) != 0) { //not a natneg packet
 		return; 

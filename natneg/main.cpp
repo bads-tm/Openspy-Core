@@ -15,6 +15,8 @@ void handleConnection(int sd, struct sockaddr_in *peer, int instance, char *buff
 		server.client_list.insert(user);
 	}
 	user->handleIncoming(buff,len);
+	if(user->deleteMe)
+		reallyDeleteClient(user);
 }
 void checkTimeouts() {
 	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
@@ -27,7 +29,7 @@ void checkTimeouts() {
 	while(iterator != end) {
 		user=*iterator;
 		++iterator;
-		if(timotim > user->getLastPacket())
+		if((user->deleteMe)||(timotim > user->getLastPacket()))
 			reallyDeleteClient(user);
 	}
 	iterator=server.client_list.begin();
