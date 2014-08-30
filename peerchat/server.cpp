@@ -690,96 +690,78 @@ bool usermodeMatches(Client *user, userMode *usermode) {
 	}
 	return hostmatches&&machineidmatches&&pidmatches;
 }
-void getModeStr(userMode *um, char *dst) {
+void getModeStr(userMode *um, std::string& dst) {
 	if(um->modeflags & EModeFlags_Voice) {
-		strcat(dst,"v");
+		dst += "v";
 	}
 	if(um->modeflags & EModeFlags_HalfOp) {
-		strcat(dst,"h");
+		dst += "h";
 	}
 	if(um->modeflags & EModeFlags_Op) {
-		strcat(dst,"o");
+		dst += "o";
 	}
 	if(um->modeflags & EModeFlags_Owner) {
-		strcat(dst,"O");
+		dst += "O";
 	}
 	if(um->modeflags & EModeFlags_Gag) {
-		strcat(dst,"g");
+		dst += "g";
 	}
 	if(um->modeflags & EModeFlags_Ban) {
-		strcat(dst,"b");
+		dst += "b";
 	}
 	if(um->modeflags & EModeFlags_Invited) {
-		strcat(dst,"I");
+		dst += "I";
 	}
 	if(um->modeflags & EModeFlags_BanExcempt) {
-		strcat(dst,"E");
+		dst += "E";
 	}
 }
 void sendUserMode(Client *user,userMode *um) {
-	char sendstr[512];
-	memset(&sendstr,0,sizeof(sendstr));
+	std::stringstream sendstr;
 	char *nick;
 	user->getUserInfo(&nick,NULL,NULL,NULL);
-	char modestr[32];
-	char tempstr[128];
-	memset(&modestr,0,sizeof(modestr));
-	getModeStr(um,(char *)&modestr);
-	sprintf(sendstr,":SERVER!SERVER@* PRIVMSG %s :LISTUSERMODE \\usermodeid\\%d\\chanmask\\%s\\modeflags\\%s",nick,um->usermodeid,um->chanmask,modestr);
+	std::string modestr;
+	getModeStr(um,modestr);
+	sendstr << ":SERVER!SERVER@* PRIVMSG " << nick << " :LISTUSERMODE \\usermodeid\\" << um->usermodeid << "\\chanmask\\" << um->chanmask << "\\modeflags\\" << modestr;
 	if(um->hostmask[0] != 0) {
-		memset(&tempstr, 0, sizeof(tempstr));
-		sprintf(tempstr, "\\hostmask\\%s",um->hostmask);
-		strcat(sendstr, tempstr);
+		sendstr << "\\hostmask\\" << um->hostmask;
 	}
 	if(um->machineid[0] != 0) {
-		memset(&tempstr, 0, sizeof(tempstr));
-		sprintf(tempstr, "\\machineid\\%s",um->machineid);
-		strcat(sendstr, tempstr);
+		sendstr << "\\machineid\\" << um->machineid;
 	}
 	if(um->profileid != 0) {
-		memset(&tempstr, 0, sizeof(tempstr));
-		sprintf(tempstr, "\\machineid\\%d",um->profileid);
-		strcat(sendstr, tempstr);
+		sendstr << "\\machineid\\" << um->profileid;
 	}
 
-	sprintf(tempstr, "\\isGlobal\\%d",um->isGlobal);
-	strcat(sendstr, tempstr);
+	sendstr << "\\isGlobal\\" << um->isGlobal;
 
 	if(um->expires != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &um->expires );
-		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sprintf(tempstr, "\\expires\\%s",timestr);
-		strcat(sendstr, tempstr);
+		sendstr << "\\expires\\" << timestr;
 	}
 	if(um->setbynick[0] != 0) {
-		sprintf(tempstr, "\\setbynick\\%s",um->setbynick);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setbynick\\" << um->setbynick;
 	}
 	if(um->setbypid != 0) {
-		sprintf(tempstr, "\\setbypid\\%d",um->setbypid);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setbypid\\" << um->setbypid;
 	}
 	if(um->setbyhost[0] != 0) {
-		sprintf(tempstr, "\\setbyhost\\%s",um->setbyhost);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setbyhost\\" << um->setbyhost;
 	}
 	if(um->comment[0] != 0) {
-		sprintf(tempstr, "\\comment\\%s",um->comment);
-		strcat(sendstr, tempstr);
+		sendstr << "\\comment\\" << um->comment;
 	}
 	if(um->setondate != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &um->setondate );
-		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sprintf(tempstr, "\\setondate\\%s",timestr);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setondate\\" << timestr;
 	}
-	user->sendToClient(sendstr);
+	user->sendToClient((char*)sendstr.str().c_str());
 }
 int getUserChannelModes(Client *user, char *channame) { //name rather than chan pointer because the channel might not exist yet
 	std::list<userMode *>::iterator iterator=server.usermodes_list.begin();
@@ -1131,72 +1113,56 @@ void checkExpiry() {
 	}
 }
 void sendChanProps(Client *who, chanProps *prop) {
-	char sendstr[512];
-	memset(&sendstr,0,sizeof(sendstr));
+	std::stringstream sendstr;
 	char *nick;
 	who->getUserInfo(&nick,NULL,NULL,NULL);
-	char tempstr[128];
 	
-	sprintf(sendstr,":SERVER!SERVER@* PRIVMSG %s :LISTCHANPROPS \\chanmask\\%s\\onlyowner\\%d",nick,prop->chanmask,prop->onlyowner);
+	sendstr << ":SERVER!SERVER@* PRIVMSG " << nick << " :LISTCHANPROPS \\chanmask\\" << prop->chanmask << "\\onlyowner\\" << prop->onlyowner;
 	if(prop->modes[0] != 0) {
-		sprintf(tempstr, "\\mode\\%s",prop->modes);
-		strcat(sendstr, tempstr);
+		sendstr << "\\mode\\" << prop->modes;
 	}
 	if(prop->topic[0] != 0) {
-		sprintf(tempstr, "\\topic\\%s",prop->topic);
-		strcat(sendstr, tempstr);
+		sendstr << "\\topic\\" << prop->topic;
 	}
 	if(prop->entrymsg[0] != 0) {
-		sprintf(tempstr, "\\entrymsg\\%s",prop->entrymsg);
-		strcat(sendstr, tempstr);
+		sendstr << "\\entrymsg\\" << prop->entrymsg;
 	}
 	if(prop->groupname[0] != 0) {
-		sprintf(tempstr, "\\groupname\\%s",prop->groupname);
-		strcat(sendstr, tempstr);
+		sendstr << "\\groupname\\" << prop->groupname;
 	}
 	if(prop->limit != 0) {
-		sprintf(tempstr, "\\limit\\%d",prop->limit);
-		strcat(sendstr, tempstr);
+		sendstr << "\\limit\\" << prop->limit;
 	}
 	if(prop->chankey[0] != 0) {
-		sprintf(tempstr, "\\chankey\\%s",prop->chankey);
-		strcat(sendstr, tempstr);
+		sendstr << "\\chankey\\" << prop->chankey;
 	}
 	if(prop->expires != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &prop->expires );
-		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sprintf(tempstr, "\\expires\\%s",timestr);
-		strcat(sendstr, tempstr);
+		sendstr << "\\expires\\" << timestr;
 	}
 	if(prop->setbynick[0] != 0) {
-		sprintf(tempstr, "\\setbynick\\%s",prop->setbynick);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setbynick\\" << prop->setbynick;
 	}
 	if(prop->setbypid != 0) {
-		sprintf(tempstr, "\\setbypid\\%d",prop->setbypid);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setbypid\\" << prop->setbypid;
 	}
 	if(prop->setbyhost != 0) {
-		sprintf(tempstr, "\\setbyhost\\%s",prop->setbyhost);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setbyhost\\" << prop->setbyhost;
 	}
 	if(prop->comment[0] != 0) {
-		sprintf(tempstr, "\\comment\\%s",prop->comment);
-		strcat(sendstr, tempstr);
+		sendstr << "\\comment\\" << prop->comment;
 	}
 	if(prop->setondate != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &prop->setondate );
-		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sprintf(tempstr, "\\setondate\\%s",timestr);
-		strcat(sendstr, tempstr);
+		sendstr << "\\setondate\\" << timestr;
 	}
-	who->sendToClient(sendstr);
+	who->sendToClient((char*)sendstr.str().c_str());
 }
 	//std::list <whowasInfo *> whowas_list
 void addWhowas(Client *user) { //at the user to the whowas list before they quit
