@@ -354,21 +354,27 @@ void gamespy3dxor(char *data, int len) {
 }
 int formatSend(int sd, bool putFinal, char enc, char *fmt, ...) {
 	va_list vars;
-	size_t len = 0;
-	char buf[1024];
-	memset(&buf,0,sizeof(buf));
-	va_start (vars, fmt);
-	len = vsnprintf(buf,sizeof(buf),fmt, vars);
-	va_end(vars);
-	if(putFinal) {
-		strcat(buf,"\\final\\");
+	int len = 0;
+	size_t bufsize = 1024;
+	char* buf = (char*)calloc(1,bufsize);
+	std::string sfmt(fmt);
+	if(putFinal) sfmt += "\\final\\";
+	for (char i = 0; i < 2; ++i) {
+		va_start (vars, fmt);
+		len = vsnprintf(buf,bufsize,sfmt.c_str(), vars);
+		va_end(vars);
+		if (len < bufsize) break;
+		else {
+			bufsize = len+1;
+			buf = (char*)realloc(buf,bufsize);
+		}
 	}
 	printf("sending: %s\n",buf);
 	if(enc == 1) {
-		len = strlen(buf);
+//		len = strlen(buf);
 		gamespyxor(buf,len);
 	} else if(enc == 2) {
-		len = strlen(buf);
+//		len = strlen(buf);
 //		if(!putFinal) len -= 7;//length of final + slashes
 		gamespy3dxor(buf,len);
 		if(putFinal == true) { //gamespy doesn't enc final part :X
@@ -377,9 +383,11 @@ int formatSend(int sd, bool putFinal, char enc, char *fmt, ...) {
 //			len+=7;
 		}	
 	} else {
-		len = strlen(buf);
+//		len = strlen(buf);
 	}
-	return send(sd,buf,len,MSG_NOSIGNAL);
+	int result = send(sd,buf,len,MSG_NOSIGNAL);
+	free(buf);
+	return result;
 }
 
 int gslame(int num) {
