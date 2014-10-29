@@ -220,7 +220,7 @@ void searchUsers(MYSQL* conn,int sd, char *buff) {
 	char *trueemail;
 	int len = 1024;
 	char tbuff[512] = { 0 };
-	char *query;
+	std::stringstream query;
 	bool emailsearch = false;
 	int namespaceid = find_paramint("namespaceid",buff);
 	memset(&icquin,0,sizeof(icquin));
@@ -259,76 +259,48 @@ void searchUsers(MYSQL* conn,int sd, char *buff) {
 	       sendError(sd,"Error recieving request");
 	       return;	
 	}
-	query = (char *)malloc(len);
-	sprintf_s(query,len,"SELECT `profileid`,`nick`,`firstname`,`lastname`,`email`,`uniquenick`,`publicmask` FROM `GameTracker`.`profiles` INNER JOIN `GameTracker`.`users` ON `GameTracker`.`profiles`.`userid` = `GameTracker`.`users`.`userid` WHERE ");
+	query << "SELECT `profileid`,`nick`,`firstname`,`lastname`,`email`,`uniquenick`,`publicmask` FROM `GameTracker`.`profiles` INNER JOIN `GameTracker`.`users` ON `GameTracker`.`profiles`.`userid` = `GameTracker`.`users`.`userid` WHERE ";
 	if(email[0] != 0) {
-		sprintf_s(tbuff,sizeof(tbuff),"`email` = '%s'",email);
+		query << boost::format("`email` = '%s'") % email;
 		if(--searchnum > 1) {
-			strcat(tbuff, " AND ");
-		}
-		strcat(query,tbuff);
-		if(strlen(query) > (len/2)) {
-			len *= 2;
-			query = (char *)realloc(query,len);
+			query << " AND ";
 		}
 	}
 	if(nick[0] != 0) {
-		sprintf_s(tbuff,sizeof(tbuff),"`nick` = '%s'",nick);
+		query << boost::format("`nick` = '%s'") % nick;
 		if(--searchnum > 1) {
-			strcat(tbuff, " AND ");
-		}
-		strcat(query,tbuff);
-		if(strlen(query) > (len/2)) {
-			len *= 2;
-			query = (char *)realloc(query,len);
+			query << " AND ";
 		}
 	}
 	if(firstname[0] != 0) {
-		sprintf_s(tbuff,sizeof(tbuff),"`firstname` = '%s'",firstname);
+		query << boost::format("`firstname` = '%s'") % firstname;
 		if(--searchnum > 1) {
-			strcat(tbuff, " AND ");
-		}
-		strcat(query,tbuff);
-		if(strlen(query) > (len/2)) {
-			len *= 2;
-			query = (char *)realloc(query,len);
+			query << " AND ";
 		}
 	}
 	if(lastname[0] != 0) {
-		sprintf_s(tbuff,sizeof(tbuff),"`lastname` = '%s'",lastname);
+		query << boost::format("`lastname` = '%s'") % lastname;
 		if(--searchnum > 1) {
-			strcat(tbuff, " AND ");
-		}
-		strcat(query,tbuff);
-		if(strlen(query) > (len/2)) {
-			len *= 2;
-			query = (char *)realloc(query,len);
+			query << " AND ";
 		}
 	}
 	if(uniquenick[0] != 0) {
-		sprintf_s(tbuff,sizeof(tbuff),"`uniquenick` = '%s'",uniquenick);
+		query << boost::format("`uniquenick` = '%s'") % uniquenick;
 		if(--searchnum > 1) {
-			strcat(tbuff, " AND ");
-		}
-		strcat(query,tbuff);
-		if(strlen(query) > (len/2)) {
-			len *= 2;
-			query = (char *)realloc(query,len);
+			query << " AND ";
 		}
 	}
 	if(icquin[0] != 0) {
-		sprintf_s(tbuff,sizeof(tbuff),"`icquin` = '%d'",atoi(icquin));
-		strcat(query,tbuff);
+		query << boost::format("`icquin` = '%d'") % atoi(icquin);
 	}
 //	strcat(query," LIMIT 0,10");
-	if (mysql_query(conn, query)) {
+	if (mysql_query(conn, query.str().c_str())) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
-		free(query);
 		return;
 	}
 	res = mysql_store_result(conn);
 	int u_pid,u_hideemail;
-	memset(query,0,len);
+	query.str("");
 	while ((row = mysql_fetch_row(res)) != NULL) {
 		u_pid = atoi(row[0]);
 		sprintf_s(nick,sizeof(nick),"%s",row[1]);
@@ -342,18 +314,12 @@ void searchUsers(MYSQL* conn,int sd, char *buff) {
 		if(u_hideemail != 0 && !emailsearch) {
 			sprintf_s(email,sizeof(email),"[hidden]");
 		}
-		sprintf_s(tbuff,sizeof(tbuff),"\\bsr\\%d\\nick\\%s\\firstname\\%s\\lastname\\%s\\email\\%s\\uniquenick\\%s\\namespaceid\\%d",u_pid,nick,firstname,lastname,email,uniquenick,namespaceid);
-		if(strlen(tbuff) > (len/2)) {
-			len *= 2;
-			query = (char *)realloc(query,len);			
-		}
-		strcat(query,tbuff);
+		query << boost::format("\\bsr\\%d\\nick\\%s\\firstname\\%s\\lastname\\%s\\email\\%s\\uniquenick\\%s\\namespaceid\\%d") % u_pid % nick % firstname % lastname % email % uniquenick % namespaceid;
    	}
-	strcat(query,"\\bsrdone\\");
-	formatSend(sd,true,0,"%s",query);
+	query << "\\bsrdone\\";
+	formatSend(sd,true,0,"%s",query.str().c_str());
 	end:
 	mysql_free_result(res);
-	free((void *)query);
 }
 void uniqueSearch(int sd, char *buff) {
 	char preferrednick[GP_NICK_LEN] = { 0 };

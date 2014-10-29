@@ -4,6 +4,8 @@
 #include <common/helpers.h>
 #include <common/mysql_helpers.h>
 #include <playerspy/gp.h>
+#include <boost/format.hpp>
+#include <sstream>
 void sendError(int sd, char *msg);
 void checkEmailValid(MYSQL* conn,int sd,char *buff);
 void sendNicks(MYSQL* conn,int sd, char *buff);
