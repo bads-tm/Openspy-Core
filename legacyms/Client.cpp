@@ -194,7 +194,7 @@ int getPeerchatUsers(int groupid) {
 	if(numUsersMsg == NULL) return 0;
 	peerchatMsg.data = (void *)numUsersMsg;
 	memset(numUsersMsg,0,sizeof(msgNumUsersOnChan));
-	sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%u",groupid);
+	sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%d",groupid);
 	numUsersMsg->showInvisible = false;
 	servoptions.sendMsgProc(moduleInfo.name,"peerchat",(void *)&peerchatMsg,sizeof(peerchatMsgData));
 	retval = numUsersMsg->numusers;
@@ -227,7 +227,7 @@ void Client::sendGroups(gameInfo *queryGame) {
 		addBuff(row[0])
 		addBuff(row[1])
 		int numusers = getPeerchatUsers(atoi(row[0]));
-		sprintf_s(otherbuff,sizeof(otherbuff),"%u",numusers);
+		sprintf_s(otherbuff,sizeof(otherbuff),"%d",numusers);
 		addBuff(otherbuff)
 		addBuff(row[2])
 		addBuff("0")
