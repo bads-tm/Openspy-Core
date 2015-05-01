@@ -212,7 +212,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 			BufferReadByte((uint8_t**)&buff,(uint32_t *)&len);
 			while(num_values_t--) {
 			//while(buff[0] != 0 && len > 0) {
-				bool is_team;
+				bool is_team = false;
 				x = BufferReadNTS((uint8_t **)&buff,(uint32_t *)&len);	
 				//BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte
 				indexedKey *key = (indexedKey *)calloc(1,sizeof(indexedKey));

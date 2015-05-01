@@ -105,6 +105,8 @@ void *openspy_mod_run(modLoadOptions *options)
 	si_me[i].sin_addr.s_addr = getIP(i);
 	if(bind(sockets[i],(struct sockaddr *)&si_me[i],sizeof(struct sockaddr)) == -1) {
 		servoptions.logMessageProc(moduleInfo.name,LOGLEVEL_ERROR,"Error binding address for socket instance %d\n",i+1);
+		free((void *)sockets);
+		free((void *)si_me);
 		return NULL;
 	}
   }
