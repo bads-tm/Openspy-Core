@@ -21,8 +21,6 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	hasInstanceKey = false;
 	game = NULL;
 	serverRegistered = false;
-	pthread_mutex_init(&lockedKeys,NULL);
-	deleteMe = false;
 	char *code = NULL;
 	#ifndef _WIN32
 	if(gi != NULL)
@@ -30,11 +28,9 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	#endif
 	country = findCountryByName(code);
 	legacyQuery = false;
-	lastPing = connecttime;
-	statSent = 0;
 }
 void Client::handleLegacyIncoming(char *buff, int len) {
-	char type[128] = { 0 };
+	char type[128];
 	if(!find_param(0,buff,(char *)&type,sizeof(type))) {
 		return; //no type
 	}
@@ -50,8 +46,7 @@ void Client::handleLegacyIncoming(char *buff, int len) {
 void Client::handleIncoming(char *buff, int len) {
 	lastPing = time(NULL);//treat anything as a ping response
 	if(len < 3) {
-		deleteMe = true;
-		return;
+		deleteClient(this);
 	}
 	if(!legacyQuery && buff[0] == '\\') {
 		bool success = true;
@@ -96,7 +91,7 @@ void Client::handleIncoming(char *buff, int len) {
 	}
 }
 void Client::handleKeepalive(char *buff,int len) {
-	char buffer[256] = { 0 };
+	char buffer[256];
 	int blen = 0;
 	char *p = (char *)&buffer;
 	BufferWriteByte((uint8_t**)&p,(uint32_t *)&blen,QR_MAGIC_1);
@@ -114,12 +109,15 @@ void Client::setData(char *variable, char *value) {
 	}
 	key = findKey(variable);
 	if(key == NULL) {
-		key = (customKey *)calloc(1,sizeof(customKey));
+		key = (customKey *)malloc(sizeof(customKey));
+		memset(key,0,sizeof(customKey));
 		serverKeys.push_back(key);
 	}
 	if(key->name == NULL) {
 		key->name = (char *)calloc(strlen(variable)+1,1);
-		strcpy(key->name,variable);
+		if(key->name != NULL) {
+			strcpy(key->name,variable);
+		}
 	}
 	if(key->value != NULL) {
 		free((void *)key->value);
@@ -130,18 +128,16 @@ void Client::setData(char *variable, char *value) {
 	}
 }
 void Client::handleServerData(char *buff, int len) {
-	char variable[128] = { 0 },value[128] = { 0 };
+	char variable[128],value[128];
 	int i=0;
-	lockKeys();
 	clearKeys();
 	while(find_param(i++,buff,(char *)&variable,sizeof(variable))) {
 		if(find_param(i++,buff,(char *)&value,sizeof(value))) {
 			setData((char *)&variable,(char *)&value);
 		}
 	}
-	unlockKeys();
 	if(getStateChanged() == 2) {
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 }
@@ -153,18 +149,15 @@ void Client::handleLegacyHeartbeat(char *buff,int len) {
 //		pushServer();
 		serverRegistered = true;
 	}
-	if((lastPing - statSent) >= 10) {
-		statSent = lastPing;
-		uint32_t blen = 0;
-		uint8_t buffer[24] = { 0 };
-		uint8_t *p = (uint8_t *)&buffer;
-		BufferWriteNTS((uint8_t**)&p,(uint32_t *)&blen,(uint8_t *)"\\status\\");
-		blen--; //we don't want the null byte
-		sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
-	}
+	uint32_t blen = 0;
+	uint8_t buffer[24];
+	uint8_t *p = (uint8_t *)&buffer;
+	BufferWriteNTS((uint8_t**)&p,(uint32_t *)&blen,(uint8_t *)"\\status\\");
+	blen--; //we don't want the null byte
+	sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
 }
 void Client::handleHeartbeat(char *buff, int len) {
-	char buffer[MAX_DATA_SIZE] = { 0 };
+	char buffer[MAX_DATA_SIZE];
 	char *p = (char *)&buffer;
 	int blen = 0;
 	if(!hasInstanceKey) { //XXX: is this right? hasn't the data been skipped in the check? nvm because if hasInstanceKey is false it won't try read the instance key
@@ -175,7 +168,6 @@ void Client::handleHeartbeat(char *buff, int len) {
 	}
 	int i = 0;
 	customKey *key = NULL;
-	lockKeys();
 	clearKeys();
 	uint8_t *x;
 	while((buff[0] != 0 && len > 0) || (i%2 != 0)) {
@@ -194,7 +186,6 @@ void Client::handleHeartbeat(char *buff, int len) {
 		free((void *)x);
 		i++;
 	}
-	unlockKeys();
 	uint16_t num_values = 0;
 	BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte(seperator)
 	while((num_values = BufferReadShortRE((uint8_t**)&buff,(uint32_t *)&len))) {
@@ -212,29 +203,25 @@ void Client::handleHeartbeat(char *buff, int len) {
 			BufferReadByte((uint8_t**)&buff,(uint32_t *)&len);
 			while(num_values_t--) {
 			//while(buff[0] != 0 && len > 0) {
-				bool is_team = false;
+				bool is_team;
 				x = BufferReadNTS((uint8_t **)&buff,(uint32_t *)&len);	
 				//BufferReadByte((uint8_t**)&buff,(uint32_t *)&len); //skip null byte
-				indexedKey *key = (indexedKey *)calloc(1,sizeof(indexedKey));
-				
-				if(key == NULL) {
-					printf("Unable to allocate memory!");
-					exit(-1);
-				}
-
+				indexedKey *key = (indexedKey *)malloc(sizeof(indexedKey));
 				char *value = NULL;
-				char *name = (char *)nameValueList.at(i);
-				if(name != NULL) {
-				is_team = isTeamString((char *)name);
-				value = (char *)x;
-				key->key.name = (char *)calloc(strlen(name) +1,1);
-				strcpy(key->key.name,name);
-				} else key->key.name = NULL;
-				if(value != NULL) {
-					key->key.value = (char *)calloc(strlen(value)+1,1);
-					strcpy(key->key.value,value);
-				} else key->key.value = NULL;
-				key->index = player;
+				if(key != NULL) {
+					char *name = (char *)nameValueList.at(i);
+					if(name != NULL) {
+					is_team = isTeamString((char *)name);
+					value = (char *)x;
+					key->key.name = (char *)calloc(strlen(name) +1,1);
+					strcpy(key->key.name,name);
+					} else key->key.name = NULL;
+					if(value != NULL) {
+						key->key.value = (char *)calloc(strlen(value)+1,1);
+						strcpy(key->key.value,value);
+					} else key->key.value = NULL;
+					key->index = player;
+				}
 				if(is_team) {
 					teamKeys.push_back(key);
 				} else {
@@ -249,8 +236,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 			}
 		}
 		std::deque<uint8_t *>::iterator iterator = nameValueList.begin();
-		std::deque<uint8_t *>::iterator end = nameValueList.end();
-		while(iterator != end) {
+		while(iterator != nameValueList.end()) {
 			free((void *)*iterator);
 			iterator++;
 		}
@@ -259,16 +245,16 @@ void Client::handleHeartbeat(char *buff, int len) {
 	if(getGameInfo() == NULL) {
 		game = servoptions.gameInfoNameProc(findServerValue("gamename"));
 		if(game == NULL) { 
-			deleteMe = true;
+			deleteClient(this);
 			return;
 		}
 	}
 	if(game->servicesdisabled != 0) {
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(getStateChanged() == 2) {
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(!sentChallenge) {
@@ -283,7 +269,7 @@ void Client::handleHeartbeat(char *buff, int len) {
 	}
 }
 void Client::handleAvailable(char *buff, int len) {
-	char buffer[MAX_DATA_SIZE] = { 0 };
+	char buffer[MAX_DATA_SIZE];
 	char *p = (char *)&buffer;
 	int blen = 0;
 	uint8_t disabledservices = 0; //available
@@ -301,8 +287,8 @@ void Client::handleAvailable(char *buff, int len) {
 	sendto(sd,(char *)&buffer,blen,0,(struct sockaddr *)&sockinfo, sizeof(sockaddr_in));
 }
 void Client::handleChallenge(char *buff, int len) {
-	char challenge[90] = { 0 };
-	char buffer[MAX_DATA_SIZE] = { 0 };
+	char challenge[90];
+	char buffer[MAX_DATA_SIZE];
 	char *p = (char *)&buffer;
 	int blen = 0;
 	gameInfo *game = NULL;
@@ -325,10 +311,7 @@ void Client::handleChallenge(char *buff, int len) {
 }
 Client::~Client() {
 	pushDelete();
-	lockKeys();
 	clearKeys();
-	unlockKeys();
-	pthread_mutex_destroy(&lockedKeys);
 }
 struct sockaddr_in *Client::getSockAddr() {
 	return (struct sockaddr_in *)&sockinfo;
@@ -365,8 +348,7 @@ void Client::clearKeys() {
 customKey *Client::findKey(char *name) {
 	customKey *key;
 	std::list<customKey *>::iterator iterator = serverKeys.begin();
-	std::list<customKey *>::iterator end = serverKeys.end();
-	while(iterator != end) {
+	while(iterator != serverKeys.end()) {
 		key = *iterator;
 		if(key->name != NULL) {
 			if(strcmp(key->name,name) == 0) {
@@ -378,10 +360,9 @@ customKey *Client::findKey(char *name) {
 	return NULL;
 }
 char *Client::findServerValue(char *name) {
-	static char regionbuff[16] = { 0 };
-	std::list<customKey *>::iterator iterator, end;
+	static char regionbuff[16];
+	std::list<customKey *>::iterator iterator;
 	iterator=serverKeys.begin();
-	end=serverKeys.end();
 	customKey *key;
 	if(stricmp(name,"country") == 0) {
 		return (char *)country->countrycode;
@@ -393,7 +374,7 @@ char *Client::findServerValue(char *name) {
 			return getGameInfo()->name;
 		}
 	}
-	while(iterator != end) {
+	while(iterator != serverKeys.end()) {
 		key = *iterator;
 		if(key->name != NULL) {
 			if(strcmp(key->name,name) == 0) {
@@ -416,19 +397,15 @@ std::list<customKey *> Client::getServerKeys() {
 }
 std::list<customKey *> Client::getRules() {
 	std::list<customKey *> rules;
-	std::list<customKey *>::iterator iterator, end;
-	std::list<indexedKey *>::iterator it2, end2;
+	std::list<customKey *>::iterator iterator;
+	std::list<indexedKey *>::iterator it2;
 	iterator=serverKeys.begin();
-	end=serverKeys.end();
 	customKey *key,*key2;
 	indexedKey *ikey;
-	while(iterator != end) {
+	while(iterator != serverKeys.end()) {
 		key = *iterator;
-		if(key == NULL || key->name == NULL || key->value == NULL) {
-			iterator++;
-			continue;
-		}
-		key2 = (customKey *)calloc(1,sizeof(customKey));
+		if(key == NULL || key->name == NULL || key->value == NULL) continue;
+		key2 = (customKey *)malloc(sizeof(customKey));
 		key2->name = (char *)calloc(strlen(key->name)+1,1);
 		strcpy(key2->name,key->name);
 		key2->value = (char *)calloc(strlen(key->value)+1,1);
@@ -437,14 +414,10 @@ std::list<customKey *> Client::getRules() {
 		iterator++;
 	}
 	it2 = playerKeys.begin();
-	end2 = playerKeys.end();
-	while(it2 != end2) {
+	while(it2 != playerKeys.end()) {
 		ikey = *it2;
-		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) {
-			it2++;
-			continue;
-		}
-		key = (customKey *)calloc(1,sizeof(customKey));
+		key = (customKey *)malloc(sizeof(customKey));
+		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) continue;
 		key->name = (char *)calloc(strlen(ikey->key.name)+32,1);
 		key->value = (char *)calloc(strlen(ikey->key.value)+32,1);
 		sprintf(key->name,"%s%d",ikey->key.name,ikey->index);
@@ -453,14 +426,9 @@ std::list<customKey *> Client::getRules() {
 		it2++;
 	}
 	it2 = teamKeys.begin();
-	end2 = teamKeys.end();
-	while(it2 != end2) {
+	while(it2 != teamKeys.end()) {
 		ikey = *it2;
-		if(ikey == NULL || ikey->key.name == NULL || ikey->key.value == NULL) {
-			it2++;
-			continue;
-		}
-		key = (customKey *)calloc(1,sizeof(customKey));
+		key = (customKey *)malloc(sizeof(customKey));
 		key->name = (char *)calloc(strlen(ikey->key.name)+32,1);
 		key->value = (char *)calloc(strlen(ikey->key.value)+32,1);
 		sprintf(key->name,"%s%d",ikey->key.name,ikey->index);
@@ -472,20 +440,23 @@ std::list<customKey *> Client::getRules() {
 }
 std::list<customKey *> Client::copyServerKeys() {
 	std::list<customKey *> rules;
-	std::list<customKey *>::iterator iterator, end;
+	std::list<customKey *>::iterator iterator;
 	iterator=serverKeys.begin();
-	end=serverKeys.end();
 	customKey *key,*key2;
-	while(iterator != end) {
+	while(iterator != serverKeys.end()) {
 		key = *iterator;
-		if(key != NULL && key->name != NULL && key->value != NULL) {
-			key2 = (customKey *)calloc(1,sizeof(customKey));
-			key2->name = (char *)calloc(strlen(key->name)+1,1);
-			strcpy(key2->name,key->name);
-			key2->value = (char *)calloc(strlen(key->value)+1,1);
-			strcpy(key2->value,key->value);
-			rules.push_back(key2);
+		if(key != NULL) {
+			key2 = (customKey *)malloc(sizeof(customKey));
+			if(key->name != NULL) {
+				key2->name = (char *)calloc(strlen(key->name)+1,1);
+				strcpy(key2->name,key->name);
+			}
+			if(key->value != NULL) {
+				key2->value = (char *)calloc(strlen(key->value)+1,1);
+				strcpy(key2->value,key->value);
+			}
 		}
+		rules.push_back(key2);
 		iterator++;
 	}
 	return rules;
@@ -494,7 +465,7 @@ gameInfo *Client::getGameInfo() {
 	return game;
 }
 uint16_t Client::getPort() {
-	char *sayport = findServerValue("hostport");
+	char *sayport = findServerValue("heartbeat");
 	if(sayport != NULL) {
 		return htons(atoi(sayport));
 	}
@@ -524,7 +495,7 @@ uint32_t Client::getServerAddress() {
 }
 uint32_t Client::getServerPort() {
 	uint16_t retip;
-	char *ipstr = findServerValue("heartbeat");
+	char *ipstr = findServerValue("hostport");
 	if(ipstr != NULL) {
 		retip = atoi(ipstr);
 		retip = htons(retip);
@@ -562,7 +533,7 @@ void Client::pushDelete() {
 	servoptions.sendMsgProc(moduleInfo.name,"serverbrowsing",(void *)&msg,sizeof(sbServerMsg));
 }
 void Client::sendMsg(void *data, int len) {
-	uint8_t senddata[256] = { 0 };
+	uint8_t senddata[256];
 	uint32_t blen = 0;
 	uint8_t *test = (uint8_t *)data;
 	uint8_t *p = (uint8_t *)&senddata;
@@ -578,13 +549,4 @@ void Client::sendMsg(void *data, int len) {
 }
 bool Client::isServerRegistered() {
 	return serverRegistered;
-}
-void Client::lockKeys() {
-	pthread_mutex_lock(&lockedKeys);
-}
-bool Client::tryLockKeys() {
-	return pthread_mutex_trylock(&lockedKeys) == 0;
-}
-void Client::unlockKeys() {
-	pthread_mutex_unlock(&lockedKeys);
 }

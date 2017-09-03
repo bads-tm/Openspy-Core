@@ -607,10 +607,10 @@ unsigned char *enctypex_msname(unsigned char *gamename, unsigned char *retname) 
     server_num %= 20;
 
     if(retname) {
-        snprintf((char *)retname, 256, "%s.ms%u.gamespy.com", gamename, server_num);
+        snprintf((char *)retname, 256, "%s.ms%d.gamespy.com", gamename, server_num);
         return(retname);
     }
-    snprintf((char *)msname, sizeof(msname), "%s.ms%u.gamespy.com", gamename, server_num);
+    snprintf((char *)msname, sizeof(msname), "%s.ms%d.gamespy.com", gamename, server_num);
     return(msname);
 }
 

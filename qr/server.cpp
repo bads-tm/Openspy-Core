@@ -236,53 +236,52 @@ countryRegion countries[] = {
 							{"ZZ","Unknown",0},
 							};
 extern serverInfo server;
-boost::container::stable_vector< boost::shared_ptr<Client> >::iterator find_user(struct sockaddr_in *peer) {
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator unusedSpot=end;
-	boost::shared_ptr<Client> user;
+void deleteClient(Client *client) {
+	std::list<Client *>::iterator iterator;
+	iterator=server.client_list.begin();
+	while(iterator != server.client_list.end()) {
+		if(*iterator==client) {
+			iterator = server.client_list.erase(iterator);
+			delete client;
+		} else
+		iterator++;
+
+	}
+}
+Client *find_user(struct sockaddr_in *peer) {
+	std::list<Client *>::iterator iterator=server.client_list.begin();
+	Client *user;
 	struct sockaddr_in *userpeer;
-	time_t timotim = time(NULL)-QR_PING_TIME;
-	while(iterator != end) {
+	while(iterator != server.client_list.end()) {
 		user=*iterator;
-		if(!user) { if(unusedSpot==end) unusedSpot=iterator; ++iterator; continue; }
-		if(timotim > user->getLastPing()) {
-			iterator->reset();
-			++iterator;
-			continue;
-		}
 		userpeer = user->getSockAddr();
 		if((userpeer->sin_addr.s_addr == peer->sin_addr.s_addr) && (userpeer->sin_port == peer->sin_port)) {
-			return iterator;
+			return user;
 		}
-		++iterator;
+		iterator++;
 	}
-	return unusedSpot;
+	return NULL;
 }
 
-boost::shared_ptr<Client> find_user(uint32_t ip, uint16_t port) {
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	boost::shared_ptr<Client> user, none;
-	while(iterator != end) {
+Client *find_user(uint32_t ip, uint16_t port) {
+	std::list<Client *>::iterator iterator=server.client_list.begin();
+	Client *user;
+	while(iterator != server.client_list.end()) {
 		user=*iterator;
-		++iterator;
-		if(!(user && user->tryLockKeys())) continue;
 		if(user->getServerAddress() == ip && user->getServerPort() == port) {
 			return user;
 		}
-		user->unlockKeys();
+		iterator++;
 	}
-	return none;
+	return NULL;
 }
 char *geoIPConvert(char *name) {
 	struct geoipConvData {
 		const char *geoIPName;
 		const char *gsName;
 	} geocountries[] = {{"GB","UK"}};
-	std::string n(name);
 	for(int i=0;i<sizeof(geocountries)/sizeof(geoipConvData);i++) {
-		if(n.compare(geocountries[i].geoIPName) == 0) {
+		if(strcmp(name,geocountries[i].geoIPName) == 0) {
 			return (char *)geocountries[i].gsName;
 		}
 	}
@@ -290,12 +289,10 @@ char *geoIPConvert(char *name) {
 }
 countryRegion *findCountryByName(char *name) {
 	int size = sizeof(countries)/sizeof(countryRegion);
-	std::string n;
 	if(name == NULL) goto end;
 	name = geoIPConvert(name);
-	n = name;
 	for(int i=0;i<size;i++) {
-		if(n.compare(countries[i].countrycode) == 0) {
+		if(strcmp(countries[i].countrycode,name) == 0) {
 			return &countries[i];
 		}
 	}

@@ -83,6 +83,7 @@ int main() {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	MYSQL *conn;
+	modLoadOptions options;
 	conn = mysql_init(NULL);
 	config = new Config("openspy.cfg");
 	mysql_server = config->getRootString("mysql_server");
@@ -98,7 +99,7 @@ int main() {
 		fprintf(stderr, "%s\n", mysql_error(conn));
 		exit(1);
 	}
-	if (mysql_query(conn, "SELECT `id`,`gamename`,`secretkey`,`queryport`,`disabledservices`,`backendflags`,`keylist`,`keytypelist` FROM `Gamemaster`.`games`")) {
+	if (mysql_query(conn, "SELECT `id`,`gamename`,`secretkey`,`queryport`,`disabledservices`,`backendflags`,`keylist`,`keytypelist` FROM `GameTracker`.`games`")) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
 		exit(1);
 	}
@@ -115,12 +116,10 @@ int main() {
 		games[i].name = (char *)malloc(len);
 		memset(games[i].name,0,len);
 		strcpy(games[i].name,row[1]);
-		len = strlen(row[2])+2;
+		len = strlen(row[2])+1;
 		games[i].secretkey = (char *)malloc(len);
 		memset(games[i].secretkey,0,len);
    		strcpy(games[i].secretkey,row[2]);
-		if (games[i].secretkey[0] == 0)
-			games[i].secretkey[0] = ' ';
 		games[i].queryport = atoi(row[3]);
 		games[i].servicesdisabled = atoi(row[4]);
 		games[i].backendflags = atoi(row[5]);

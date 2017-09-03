@@ -23,9 +23,6 @@
 #define REGIONID_MIDDLE_EAST 1048576
 #define REGIONID_SOUTH_EAST_EUROPE 2097152
 #define REGIONID_WESTERN_EUROPE 4194304
-#include <boost/interprocess/containers/stable_vector.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/shared_ptr.hpp>
 class Client;
 enum {
 	EQRMsgID_GetServer = 32,
@@ -41,7 +38,7 @@ typedef struct {
 	int index; //player 0, team 0, etc
 } indexedKey;
 typedef struct {
-	boost::container::stable_vector< boost::shared_ptr<Client> > client_list;	
+	std::list<Client *> client_list;	
 } serverInfo;
 typedef struct {
 	const char *countrycode;

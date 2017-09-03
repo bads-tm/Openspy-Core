@@ -23,22 +23,20 @@ void checkPing(Client *c) {
 }
 void processClients(fd_set *rset) {
 	Client *c;
-	boost::unordered_set <Client *> clist = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator=clist.begin();
+	std::list <Client *> clist = server.client_list;
+	std::list<Client *>::iterator iterator=clist.begin();
 		 while(iterator != clist.end()) {
 			c=*iterator;
 			checkPing(c);
 			c->mainLoop(rset);
-			if(c->deleteMe)
-				reallyDeleteClient(c);
 			iterator++;
 		 }
 }
 int getnfds(fd_set *rset) {
 	int hsock = 0;
 	Client *c;
-	boost::unordered_set <Client *> clist = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator=clist.begin();
+	std::list <Client *> clist = server.client_list;
+	std::list<Client *>::iterator iterator=clist.begin();
 		 while(iterator != clist.end()) {
 			c=*iterator;
 			int sock = c->getSocket();
@@ -81,7 +79,6 @@ void loadChanProps() {
 	server.chanprops_list.push_back(props);
 	applyChanProps(props, false);
    }
-   mysql_free_result(res);
 }
 void loadUserModes() {
 	MYSQL_RES *res;
@@ -152,7 +149,7 @@ void processQueue(int sd) {
 	ssize_t len;
 	char buf[2048];
 	struct sockaddr si_other;
-	socklen_t slen = sizeof(si_other);
+	socklen_t slen;
 	msgAddOper *addOpermsg;
 	msgDelOper *delOpermsg;
 	msgSetChanProps *setChanPropsmsg;
@@ -248,7 +245,6 @@ void *openspy_mod_run(modLoadOptions *options)
 	socklen_t psz;
 #endif
 	u_long on_a=1;
-	unsigned int db_timeout = 10;
 	struct  sockaddr_in peer;
 	int sdl,sdq;
 	fd_set  rset;
@@ -260,7 +256,6 @@ void *openspy_mod_run(modLoadOptions *options)
     peer.sin_family      = AF_INET;
     server.conn = mysql_init(NULL);
     mysql_options(server.conn,MYSQL_OPT_RECONNECT, (char *)&on_a);
-    mysql_options(server.conn,MYSQL_OPT_READ_TIMEOUT, &db_timeout);
    /* Connect to database */
 
 
@@ -331,7 +326,7 @@ void *openspy_mod_run(modLoadOptions *options)
 		param->server=&server;
 		memcpy(&param->peer,&peer,sizeof(struct sockaddr));
 		c=new Client(param);
-		server.client_list.insert(c);
+		server.client_list.push_back(c);
     }
    return NULL;
 }

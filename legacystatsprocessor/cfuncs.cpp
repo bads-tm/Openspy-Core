@@ -24,7 +24,7 @@ int GetSSString(lua_State *L) {
 	const char *data = lua_tostring(L, 1);
 	const char *value = lua_tostring(L, 2);
 	if(data == NULL || value == NULL) return -1;
-	char dst[256] = { 0 };
+	char dst[256];
 	if(!find_param((char *)value,(char *)data,(char *)&dst,sizeof(dst))) {
 		return -1;
 	}
@@ -42,7 +42,7 @@ int GetPlayerIntValue(lua_State *L) {
 	return 1;
 }
 int GetPlayerStringValue(lua_State *L) {
-	char data[256] = { 0 };
+	char data[256];
 	int gameid = lua_tonumber(L, 1);
 	persisttype_t type = (persisttype_t )lua_tonumber(L, 2);
 	int index = lua_tonumber(L, 3);

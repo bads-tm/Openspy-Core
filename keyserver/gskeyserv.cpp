@@ -13,7 +13,7 @@ void *openspy_mod_run(modLoadOptions *options)
   char skey[16];
   char key[512];
   struct sockaddr si_other;
-  socklen_t slen = sizeof(si_other);
+  socklen_t slen;
   struct sockaddr_in si_me;
   if((sd=socket(AF_INET,SOCK_DGRAM, IPPROTO_UDP)) == -1)
    return NULL;

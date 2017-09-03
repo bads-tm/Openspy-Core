@@ -1,5 +1,4 @@
 #include "main.h"
-#include "server.h"
 #include "Client.h"
 #include "filter.h"
 modInfo moduleInfo = {"qr","Gamespy Query and Reporting server(heartbeat)"};
@@ -9,15 +8,12 @@ serverInfo server;
 GeoIP *gi;
 #endif
 bool findMatchingServers(qrServerList *listData, char *sendmodule) {
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	boost::shared_ptr<Client> user;
+	std::list<Client *>::iterator iterator=server.client_list.begin();
+	Client *user;
 	serverList slist;
 	int i=0;
-	while(iterator != end) {
+	while(iterator != server.client_list.end()) {
 		user=*iterator;
-		++iterator;
-		if(!(user && user->tryLockKeys())) continue;
 		if(user->getGameInfo() == listData->game) {
 			if(filterMatches(listData->filter,user) && user->isServerRegistered()) {
 				slist.serverKeys = user->copyServerKeys();
@@ -27,19 +23,18 @@ bool findMatchingServers(qrServerList *listData, char *sendmodule) {
 				listData->server_list.push_back(slist);
 			}
 		}
-		user->unlockKeys();
 		i++;	
+		iterator++;
 	}
 	listData->numServers = i;
 	return i != 0;
 }
 void findMatchingServers_GetRules(qrServerRules *rulesData, char *sendmodule) {
-	boost::shared_ptr<Client> user;
+	Client *user;
 	user = find_user(rulesData->ipaddr,rulesData->port);
-	if(user) {
+	if(user != NULL) {
 		//getRules allocates data which must be freed
 		rulesData->server_rules = user->getRules();
-		user->unlockKeys();
 	}
 }
 void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
@@ -47,19 +42,12 @@ void handleClient(int sd,struct sockaddr_in *si_other,char *buff,int len) {
 	char *p = (char *)&send;
 	int blen = 0;
 	int slen = sizeof(sockaddr_in);
-	boost::shared_ptr<Client> user;
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=find_user(si_other);
-	if(iterator == end) { //unregistered user, create
-		user = boost::make_shared<Client>(sd,si_other);
+	Client *user = find_user(si_other);
+	if(user == NULL) { //unregistered user, create
+		user = new Client(sd,si_other);
 		server.client_list.push_back(user);
-	} else if(!*iterator) {
-		user = boost::make_shared<Client>(sd,si_other);
-		*iterator = user;
-	} else user = *iterator;
+	}
 	user->handleIncoming(buff,len);
-	if(user->deleteMe)
-		iterator->reset();
 	
 }
 void *openspy_mod_run(modLoadOptions *options) {
@@ -91,8 +79,8 @@ void *openspy_mod_run(modLoadOptions *options) {
     tv.tv_usec = 0;
     setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,  sizeof tv);
     len = recvfrom(sd,(char *)&buf,sizeof(buf), 0, (struct sockaddr *)&si_other, &slen);
+    checkTimeouts();
     if(len < 0) { //timeout, do keep alives and delete clients who have expired
-	checkTimeouts();
 	continue;
     }
     buf[len] = 0;
@@ -102,10 +90,9 @@ void *openspy_mod_run(modLoadOptions *options) {
 	return NULL;
 }
 void sendClientMessage(qrClientMsg *cmsg) {
-	boost::shared_ptr<Client> c = find_user(cmsg->toip,cmsg->toport);
-	if(c) {
+	Client *c = find_user(cmsg->toip,cmsg->toport);
+	if(c != NULL) {
 		c->sendMsg(cmsg->data,cmsg->len);
-		c->unlockKeys();
 	}
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {
@@ -132,15 +119,15 @@ modInfo *openspy_modInfo() {
 	return &moduleInfo;
 }
 void checkTimeouts() {
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	boost::shared_ptr<Client> user;
-	time_t timotim = time(NULL)-QR_PING_TIME;
-	while(iterator != end) {
+	std::list<Client *>::iterator iterator=server.client_list.begin();
+	Client *user;
+	while(iterator != server.client_list.end()) {
 		user=*iterator;
-		if(!user) { ++iterator; continue; }
-		if(timotim > user->getLastPing())
-			iterator->reset();
-		++iterator;
+		if(time(NULL)-QR_PING_TIME > user->getLastPing()) {
+			deleteClient(user);
+			iterator = server.client_list.begin();
+			continue;
+		}
+		iterator++;
 	}
 }

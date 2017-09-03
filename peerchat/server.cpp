@@ -3,24 +3,16 @@
 #include "channel.h"
 extern peerchatServer server;
 void deleteClient(Client *client) {
-	client->deleteMe = true;
-}
-void reallyDeleteClient(Client *client) {
-/*
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	while(iterator != server.client_list.end()) {
 		if(*iterator==client) {
 			iterator = server.client_list.erase(iterator);
-*/
-	server.client_list.erase(client);
-	delete client;
-/*
+			delete client;
 		} else
 		iterator++;
 
 	}
-*/
 }
 void deleteChannel(Channel *client) {
 	std::list<Channel *>::iterator iterator;
@@ -42,8 +34,8 @@ void sendToAll(char *str, ...) {
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
 	va_end(args);
-	boost::unordered_set<Client *> list = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *> list = server.client_list;
+	std::list<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -56,8 +48,8 @@ void sendWallops(Client *sender,char *msg) {
 	char sbuff[MAX_BUFF];
 	char *nick,*user,*cnick;
 	memset(&sbuff,0,sizeof(sbuff));
-	boost::unordered_set<Client *> list = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *> list = server.client_list;
+	std::list<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -77,8 +69,8 @@ void sendToAllOpers(uint32_t rights,char *str,...) {
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
 	va_end(args);
-	boost::unordered_set<Client *> list = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *> list = server.client_list;
+	std::list<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -97,8 +89,8 @@ void sendToAllOpers(char *str,...) {
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
 	va_end(args);
-	boost::unordered_set<Client *> list = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *> list = server.client_list;
+	std::list<Client *>::iterator iterator;
 	iterator=list.begin();
 	Client *c;
 	while(iterator != list.end()) {
@@ -128,7 +120,7 @@ void sendToAllOpers(char *str,...) {
 bool nameInUse(char *name) {
 	Client *c;
 	char *cnick;
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
+	std::list<Client *>::iterator iterator=server.client_list.begin();
 		 while(iterator != server.client_list.end()) {
 			c=*iterator;
 			c->getUserInfo(&cnick,NULL,NULL,NULL);
@@ -175,7 +167,7 @@ Channel *find_chan(char *name) {
 	return NULL;
 }
 Client *find_user(char *name) {
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
+	std::list<Client *>::iterator iterator=server.client_list.begin();
 	Client *chan;
 	char *cname;
 	while(iterator != server.client_list.end()) {
@@ -342,13 +334,10 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 	char data[128];
 	char *nick, *host;
 	int pid = 0;
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	userMode *usermode = (userMode *)malloc(sizeof(userMode));
-	
-	if(usermode == NULL) {
-		fprintf(stderr, "Unable to allocate memory");
-		exit(1);
-	}
-
+	if(usermode == NULL) return;
 	memset(usermode,0,sizeof(userMode));
 	usermode->isGlobal = true;
 	if(find_param("hostmask", modestr, data, MAX_NAME)) {
@@ -392,7 +381,6 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 	if(setter != NULL && ~setter->getRights() & OPERPRIVS_GLOBALOWNER) {
 		Channel *chan = find_chan(target);
 		if(chan == NULL) {
-			free((void *)usermode);
 			setter->send_numeric(403, "%s %s :No such channel",nick,target);
 			return;
 		}
@@ -400,39 +388,32 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 		if(cClient == NULL) {
 			//:s 442 CHC #gsp!subhome :You're not on that channel
 			setter->send_numeric(442, "%s %s :You're not on that channel",nick,target);
-			free((void *)usermode);
 			return;
 		}
 		if(chan->onlyowner) {
 			if(!cClient->owner) {
 				chan->sendNotEnoughPrivs(ENotEnough_OWNER,setter,"Setting ops");
-				free((void *)usermode);
 				return;
 			}
 		}
 		if(usermode->modeflags & EModeFlags_Op && !cClient->owner) {
 			chan->sendNotEnoughPrivs(ENotEnough_OWNER,setter,"Setting ops");
-			free((void *)usermode);
 			return;
 		}
 		if(usermode->modeflags & EModeFlags_HalfOp && !cClient->op && !cClient->owner) {
 			chan->sendNotEnoughPrivs(ENotEnough_OP,setter,"Setting Halfops");
-			free((void *)usermode);
 			return;
 		}
 		if(usermode->modeflags & EModeFlags_Op && !cClient->op && !cClient->owner) {
 			chan->sendNotEnoughPrivs(ENotEnough_OP,setter,"Setting ops");
-			free((void *)usermode);
 			return;
 		}
 		if(usermode->modeflags & EModeFlags_Voice && !cClient->op && !cClient->owner && !cClient->halfop) {
 			chan->sendNotEnoughPrivs(ENotEnough_HALFOP,setter,"Setting voice");
-			free((void *)usermode);
 			return;
 		}
 		if(cClient->halfop == false && cClient->op == false && cClient->owner == false) {
 			chan->sendNotEnoughPrivs(ENotEnough_HALFOP,setter,"Setting modes");
-			free((void *)usermode);
 			return;
 		}
 		if(chan->registered) {
@@ -475,8 +456,6 @@ void addUserMode(Client *setter, char *target, char *modestr, bool addSQL) {
 		usermode->usermodeid = -((usermode->usermodeid * 2) * rand());
 		server.usermodes_list.push_back(usermode);
 		applyUserMode(usermode);
-	} else {
-		free(usermode);
 	}
 }
 void applyUserModes(Client *user) {
@@ -552,7 +531,7 @@ bool isGlobalBanned(Client *user) {
 	return false;
 }
 void applyUserMode(userMode *usermode) {
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
+	std::list<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	if(tolower(usermode->chanmask[0]) == 'x' && usermode->chanmask[1] == 0) { //global
 		while(iterator != server.client_list.end()) {
@@ -690,78 +669,96 @@ bool usermodeMatches(Client *user, userMode *usermode) {
 	}
 	return hostmatches&&machineidmatches&&pidmatches;
 }
-void getModeStr(userMode *um, std::string& dst) {
+void getModeStr(userMode *um, char *dst) {
 	if(um->modeflags & EModeFlags_Voice) {
-		dst += "v";
+		strcat(dst,"v");
 	}
 	if(um->modeflags & EModeFlags_HalfOp) {
-		dst += "h";
+		strcat(dst,"h");
 	}
 	if(um->modeflags & EModeFlags_Op) {
-		dst += "o";
+		strcat(dst,"o");
 	}
 	if(um->modeflags & EModeFlags_Owner) {
-		dst += "O";
+		strcat(dst,"O");
 	}
 	if(um->modeflags & EModeFlags_Gag) {
-		dst += "g";
+		strcat(dst,"g");
 	}
 	if(um->modeflags & EModeFlags_Ban) {
-		dst += "b";
+		strcat(dst,"b");
 	}
 	if(um->modeflags & EModeFlags_Invited) {
-		dst += "I";
+		strcat(dst,"I");
 	}
 	if(um->modeflags & EModeFlags_BanExcempt) {
-		dst += "E";
+		strcat(dst,"E");
 	}
 }
 void sendUserMode(Client *user,userMode *um) {
-	std::stringstream sendstr;
+	char sendstr[512];
+	memset(&sendstr,0,sizeof(sendstr));
 	char *nick;
 	user->getUserInfo(&nick,NULL,NULL,NULL);
-	std::string modestr;
-	getModeStr(um,modestr);
-	sendstr << ":SERVER!SERVER@* PRIVMSG " << nick << " :LISTUSERMODE \\usermodeid\\" << um->usermodeid << "\\chanmask\\" << um->chanmask << "\\modeflags\\" << modestr;
+	char modestr[32];
+	char tempstr[128];
+	memset(&modestr,0,sizeof(modestr));
+	getModeStr(um,(char *)&modestr);
+	sprintf(sendstr,":SERVER!SERVER@* PRIVMSG %s :LISTUSERMODE \\usermodeid\\%d\\chanmask\\%s\\modeflags\\%s",nick,um->usermodeid,um->chanmask,modestr);
 	if(um->hostmask[0] != 0) {
-		sendstr << "\\hostmask\\" << um->hostmask;
+		memset(&tempstr, 0, sizeof(tempstr));
+		sprintf(tempstr, "\\hostmask\\%s",um->hostmask);
+		strcat(sendstr, tempstr);
 	}
 	if(um->machineid[0] != 0) {
-		sendstr << "\\machineid\\" << um->machineid;
+		memset(&tempstr, 0, sizeof(tempstr));
+		sprintf(tempstr, "\\machineid\\%s",um->machineid);
+		strcat(sendstr, tempstr);
 	}
 	if(um->profileid != 0) {
-		sendstr << "\\machineid\\" << um->profileid;
+		memset(&tempstr, 0, sizeof(tempstr));
+		sprintf(tempstr, "\\machineid\\%d",um->profileid);
+		strcat(sendstr, tempstr);
 	}
 
-	sendstr << "\\isGlobal\\" << um->isGlobal;
+	sprintf(tempstr, "\\isGlobal\\%d",um->isGlobal);
+	strcat(sendstr, tempstr);
 
 	if(um->expires != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &um->expires );
+		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sendstr << "\\expires\\" << timestr;
+		sprintf(tempstr, "\\expires\\%s",timestr);
+		strcat(sendstr, tempstr);
 	}
 	if(um->setbynick[0] != 0) {
-		sendstr << "\\setbynick\\" << um->setbynick;
+		sprintf(tempstr, "\\setbynick\\%s",um->setbynick);
+		strcat(sendstr, tempstr);
 	}
 	if(um->setbypid != 0) {
-		sendstr << "\\setbypid\\" << um->setbypid;
+		sprintf(tempstr, "\\setbypid\\%d",um->setbypid);
+		strcat(sendstr, tempstr);
 	}
 	if(um->setbyhost[0] != 0) {
-		sendstr << "\\setbyhost\\" << um->setbyhost;
+		sprintf(tempstr, "\\setbyhost\\%s",um->setbyhost);
+		strcat(sendstr, tempstr);
 	}
 	if(um->comment[0] != 0) {
-		sendstr << "\\comment\\" << um->comment;
+		sprintf(tempstr, "\\comment\\%s",um->comment);
+		strcat(sendstr, tempstr);
 	}
 	if(um->setondate != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &um->setondate );
+		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sendstr << "\\setondate\\" << timestr;
+		sprintf(tempstr, "\\setondate\\%s",timestr);
+		strcat(sendstr, tempstr);
 	}
-	user->sendToClient((char*)sendstr.str().c_str());
+	user->sendToClient(sendstr);
 }
 int getUserChannelModes(Client *user, char *channame) { //name rather than chan pointer because the channel might not exist yet
 	std::list<userMode *>::iterator iterator=server.usermodes_list.begin();
@@ -798,7 +795,7 @@ userMode *getUserMode(int usermodeid) {
 	return NULL;
 }
 void removeUsermode(userMode *usermode, bool nosql) {
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
+	std::list<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
 	if(nosql || usermode->isGlobal == 0) {
 		if(tolower(usermode->chanmask[0]) == 'x' && usermode->chanmask[1] == 0) {
@@ -886,6 +883,8 @@ void addChanProp(Client *setter, char *target, char *modestr) {
 	int pid;
 	chanProps *props;
 	bool newProp = false;
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	props = findChanProp(target);
 	if(props == NULL) {
 		if(~setter->getRights() & OPERPRIVS_GLOBALOWNER) {
@@ -1105,7 +1104,6 @@ void checkExpiry() {
 		info = *iterator3;
 		if(info->quittime+WHOWAS_TIMEOUT<time(NULL)) {
 			server.whowas_list.remove(info);
-			free(info);
 			iterator3=server.whowas_list.begin();
 			continue;
 		}
@@ -1113,56 +1111,72 @@ void checkExpiry() {
 	}
 }
 void sendChanProps(Client *who, chanProps *prop) {
-	std::stringstream sendstr;
+	char sendstr[512];
+	memset(&sendstr,0,sizeof(sendstr));
 	char *nick;
 	who->getUserInfo(&nick,NULL,NULL,NULL);
+	char tempstr[128];
 	
-	sendstr << ":SERVER!SERVER@* PRIVMSG " << nick << " :LISTCHANPROPS \\chanmask\\" << prop->chanmask << "\\onlyowner\\" << prop->onlyowner;
+	sprintf(sendstr,":SERVER!SERVER@* PRIVMSG %s :LISTCHANPROPS \\chanmask\\%s\\onlyowner\\%d",nick,prop->chanmask,prop->onlyowner);
 	if(prop->modes[0] != 0) {
-		sendstr << "\\mode\\" << prop->modes;
+		sprintf(tempstr, "\\mode\\%s",prop->modes);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->topic[0] != 0) {
-		sendstr << "\\topic\\" << prop->topic;
+		sprintf(tempstr, "\\topic\\%s",prop->topic);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->entrymsg[0] != 0) {
-		sendstr << "\\entrymsg\\" << prop->entrymsg;
+		sprintf(tempstr, "\\entrymsg\\%s",prop->entrymsg);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->groupname[0] != 0) {
-		sendstr << "\\groupname\\" << prop->groupname;
+		sprintf(tempstr, "\\groupname\\%s",prop->groupname);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->limit != 0) {
-		sendstr << "\\limit\\" << prop->limit;
+		sprintf(tempstr, "\\limit\\%d",prop->limit);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->chankey[0] != 0) {
-		sendstr << "\\chankey\\" << prop->chankey;
+		sprintf(tempstr, "\\chankey\\%s",prop->chankey);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->expires != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &prop->expires );
+		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sendstr << "\\expires\\" << timestr;
+		sprintf(tempstr, "\\expires\\%s",timestr);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->setbynick[0] != 0) {
-		sendstr << "\\setbynick\\" << prop->setbynick;
+		sprintf(tempstr, "\\setbynick\\%s",prop->setbynick);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->setbypid != 0) {
-		sendstr << "\\setbypid\\" << prop->setbypid;
+		sprintf(tempstr, "\\setbypid\\%d",prop->setbypid);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->setbyhost != 0) {
-		sendstr << "\\setbyhost\\" << prop->setbyhost;
+		sprintf(tempstr, "\\setbyhost\\%s",prop->setbyhost);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->comment[0] != 0) {
-		sendstr << "\\comment\\" << prop->comment;
+		sprintf(tempstr, "\\comment\\%s",prop->comment);
+		strcat(sendstr, tempstr);
 	}
 	if(prop->setondate != 0) {
 		struct tm * timeinfo;
 		timeinfo = localtime ( &prop->setondate );
+		memset(&tempstr, 0, sizeof(tempstr));
 		char timestr[256];
 		strftime(timestr,sizeof(timestr),"%m/%d/%Y %H:%M",timeinfo);
-		sendstr << "\\setondate\\" << timestr;
+		sprintf(tempstr, "\\setondate\\%s",timestr);
+		strcat(sendstr, tempstr);
 	}
-	who->sendToClient((char*)sendstr.str().c_str());
+	who->sendToClient(sendstr);
 }
 	//std::list <whowasInfo *> whowas_list
 void addWhowas(Client *user) { //at the user to the whowas list before they quit
@@ -1236,8 +1250,8 @@ void sendToAllWithMode(uint32_t mode, char *str,...) {
 	char sbuff[MAX_BUFF];
 	int slen;
 	va_list args;
-	boost::unordered_set<Client *> list = server.client_list;
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *> list = server.client_list;
+	std::list<Client *>::iterator iterator;
 	memset(&sbuff,0,sizeof(sbuff));
 	va_start( args, str );	
 	slen = vsprintf_s(sbuff,sizeof(sbuff),str,args);
@@ -1284,7 +1298,7 @@ void removeChannelInvite(Client *user, Channel *chan) {
 	}
 }
 void resetByProfileID(int profileid, char *reason) {
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *user;
 	while(iterator != server.client_list.end()) {
@@ -1360,7 +1374,7 @@ bool deleteGameClient(char *chanmask, int gameid) {
 	return false;
 }
 Client *findClientBySocket(int sd) {
-	boost::unordered_set<Client *>::iterator it = server.client_list.begin();
+	std::list<Client *>::iterator it = server.client_list.begin();
 	Client *client;
 	while(it != server.client_list.end()) {
 		client = *it;
@@ -1373,7 +1387,7 @@ Client *findClientBySocket(int sd) {
 }
 int numUsersByIP(uint32_t ip) {
 	int i=0;
-	boost::unordered_set<Client *>::iterator it = server.client_list.begin();
+	std::list<Client *>::iterator it = server.client_list.begin();
 	Client *client;
 	while(it != server.client_list.end()) {
 		client = *it;

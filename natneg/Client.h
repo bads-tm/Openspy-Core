@@ -22,7 +22,6 @@ class Client {
 		bool getConnectedAck();
 		void sendDeadBeatNotice();
 		void trySendConnect(bool sendToOther = true);
-		bool deleteMe;
 	private:
 		void handleInitPacket(NatNegPacket *packet);
 		void handleAddressCheck(NatNegPacket *packet);
@@ -42,6 +41,6 @@ class Client {
 		bool gotInit;
 		bool gotConnectAck;
 		gameInfo *game;
-		struct sockaddr_in sockinfo, punching;
+		struct sockaddr_in sockinfo;
 };
 #endif

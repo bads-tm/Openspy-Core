@@ -1,7 +1,6 @@
 #include "Client.h"
 #include "server.h"
 #include <common/enctype_shared.h>
-#include <cstddef>
 extern MYSQL *conn;
 Client::Client(int sd, struct sockaddr_in *peer) {
 	char sbuff[256];
@@ -10,23 +9,21 @@ Client::Client(int sd, struct sockaddr_in *peer) {
 	memset(&sbuff,0,sizeof(sbuff));
 	game = NULL;
 	this->sd = sd;
-	memcpy(&sockinfo,peer,sizeof(struct sockaddr_in));
+	memcpy(&sockinfo,&peer,sizeof(struct sockaddr_in));
 	gen_random((char *)&challenge,6);
 	enctype = 0;
-	lastPing = time(NULL);
 	validated = false;
 	keyptr = NULL;
 	sendbuff = NULL;
 	sbuffp = NULL;
 	sbuffalloclen = 0;
 	sendlen = 0;
-	deleteMe = false;
 	slen = sprintf_s(sbuff,sizeof(sbuff),"\\basic\\\\secure\\%s",challenge);
 	//for some reason theres a null byte sent at the end so send it here too
 	senddata((char *)&sbuff,slen,false,true,true,true);
 }
 Client::~Client() {
-	senddata(NULL, 0, true, false, !validated, true ); //flush remaining data
+	senddata(NULL, 0, true, false, false, true ); //flush remaining data
 	free((void *)sbuffp);
 	close(sd);
 }
@@ -49,7 +46,7 @@ time_t Client::getConnectTime() {
 	return connected;
 }
 void Client::processConnection(fd_set *rset) {
-	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = {0};
+	char buf[MAX_OUTGOING_REQUEST_SIZE + 1];
 	char type[128];
 	int len;
 	if(!FD_ISSET(sd,rset)) {
@@ -57,7 +54,7 @@ void Client::processConnection(fd_set *rset) {
 	}
 	len = recv(sd,buf,sizeof(buf),MSG_NOSIGNAL);
 	if(len == 0 || len == -1) { //disconnected
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(!do_db_check()) {
@@ -80,7 +77,6 @@ void Client::processConnection(fd_set *rset) {
 }
 void Client::handleData(uint8_t *buff,uint32_t len) {
 	char cmd[64];
-	this->lastPing = time(NULL);
 	if(!find_param(0, (char *)buff, (char *)&cmd, sizeof(cmd))) {
 		return;
 	}
@@ -135,21 +131,17 @@ void Client::handleValidation(uint8_t *buff,uint32_t len) {
 	char gamename[64];
 	enctype = find_paramint("enctype",(char *)buff);
 	if(enctype < 0 || enctype > 2) {
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	} 
 	find_param("gamename",(char *)buff, (char *)&gamename,sizeof(gamename));
 	game = servoptions.gameInfoNameProc((char *)gamename);
-	if (game == NULL) {
-		deleteMe = true;
-		return;
-	}
 	find_param("validate",(char *)buff,(char *)&validation,sizeof(validation));
 	gsseckey((unsigned char *)&realvalidate, (unsigned char *)&challenge, (unsigned char *)game->secretkey, enctype);
 	if(strcmp(realvalidate,validation) == 0 && game != NULL && game->servicesdisabled == 0) {
 		validated = true;
 	} else {
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(enctype != 0){
@@ -180,10 +172,8 @@ void Client::handleList(uint8_t *buff,uint32_t len) {
 		sendGroups(queryGame);
 	} else if(strcmp("info2", type) == 0) {
 		//TODO
-	} else {
-		sendServers(queryGame,hasFilter==true?((char *)&filter):NULL,true);
 	}
-	deleteMe = true;//appearently the server immidently terminates the connection
+	deleteClient(this);//appearently the server immidently terminates the connection
 }
 int getPeerchatUsers(int groupid) {
 	int retval;
@@ -194,7 +184,7 @@ int getPeerchatUsers(int groupid) {
 	if(numUsersMsg == NULL) return 0;
 	peerchatMsg.data = (void *)numUsersMsg;
 	memset(numUsersMsg,0,sizeof(msgNumUsersOnChan));
-	sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%d",groupid);
+	sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%u",groupid);
 	numUsersMsg->showInvisible = false;
 	servoptions.sendMsgProc(moduleInfo.name,"peerchat",(void *)&peerchatMsg,sizeof(peerchatMsgData));
 	retval = numUsersMsg->numusers;
@@ -218,7 +208,7 @@ void Client::sendGroups(gameInfo *queryGame) {
 	sprintf_s(query,sizeof(query),"SELECT `groupid`,`name`,`maxwaiting`,`password`,`other` FROM `Gamemaster`.`grouplist` WHERE `gameid` = '%d'",queryGame->id);
 	if (mysql_query(conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	senddata(fielddata,strlen(fielddata),false,false);
@@ -227,7 +217,7 @@ void Client::sendGroups(gameInfo *queryGame) {
 		addBuff(row[0])
 		addBuff(row[1])
 		int numusers = getPeerchatUsers(atoi(row[0]));
-		sprintf_s(otherbuff,sizeof(otherbuff),"%d",numusers);
+		sprintf_s(otherbuff,sizeof(otherbuff),"%u",numusers);
 		addBuff(otherbuff)
 		addBuff(row[2])
 		addBuff("0")
@@ -244,10 +234,9 @@ void Client::sendGroups(gameInfo *queryGame) {
 	mysql_free_result(res);
 	
 }
-void Client::sendServers(gameInfo *queryGame, char *filter, bool basic) {
+void Client::sendServers(gameInfo *queryGame, char *filter) {
 	char sbuff[sizeof(uint32_t) + sizeof(uint16_t)];
 	char *buff = (char *)(&sbuff);
-	char bbuff[32];
 	int len = 0; //required for bufferwrite stuff
 	qrServerMsg msg;
 	qrServerList listData;
@@ -257,21 +246,9 @@ void Client::sendServers(gameInfo *queryGame, char *filter, bool basic) {
 	msg.msgID = EQRMsgID_GetServer;
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
-	std::list<serverList>::iterator end = listData.server_list.end();
 	serverList slist;
-	if (basic) {
-		len = sprintf_s(bbuff,sizeof(bbuff),"\\basic\\");
-		senddata((char *)&bbuff,len,false,false);
-	}
-	while(iterator != end) {
+	while(iterator != listData.server_list.end()) {
 		slist = *iterator;
-		if (basic) {
-			len = sprintf_s(bbuff,sizeof(bbuff),"\\ip\\%s:%d",inet_ntoa((struct in_addr){slist.ipaddr}),ntohs(slist.port));
-			senddata((char *)&bbuff,len,false,false);
-			freeServerRuleList(slist.serverKeys);
-			iterator++;
-			continue;
-		}
 		BufferWriteInt((uint8_t **)&buff,(uint32_t *)&len,slist.ipaddr);
 		BufferWriteShort((uint8_t **)&buff,(uint32_t *)&len,slist.port);
 		freeServerRuleList(slist.serverKeys);
@@ -282,11 +259,10 @@ void Client::sendServers(gameInfo *queryGame, char *filter, bool basic) {
 	
 }
 void Client::freeServerRuleList(std::list<customKey *> slist) {
-	std::list<customKey *>::iterator it, end;
+	std::list<customKey *>::iterator it;
 	customKey *key;
 	it = slist.begin();
-	end = slist.end();
-	while(it != end) {
+	while(it != slist.end()) {
 		key = *it;
 		if(key->name != NULL) free((void *)key->name);
 		if(key->value != NULL) free((void *)key->value);
@@ -301,11 +277,9 @@ void Client::senddata(char *buff, int len, bool sendFinal, bool initPacket, bool
 		sbuffp = sendbuff;
 	} else if(len > (sbuffalloclen-128) || ((sendbuff - sbuffp)+len > (sbuffalloclen-128))) {
 		char *sptr = sbuffp;
-		ptrdiff_t dptr = sendbuff - sbuffp;
 		sbuffp = (char *)realloc(sbuffp,sbuffalloclen+len+1024);
 		if(sbuffp != NULL) {
 			sbuffalloclen += len+1024;
-			sendbuff = sbuffp + dptr;
 		} else sbuffp = sptr;
 	}
 	if(buff != NULL)

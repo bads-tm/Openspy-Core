@@ -16,7 +16,6 @@ Client::Client(clientParams* params) {
 	memset(&challenge,0,sizeof(challenge));
 	gen_random(challenge,10);
 	gameInProgress = false;
-	deleteMe = false;
 	formatSend(sd,true,2,"\\lc\\1\\challenge\\%s\\id\\1",challenge);
 	free((void *)params);
 }
@@ -36,7 +35,7 @@ void Client::mainLoop(fd_set *rset) {
 	len = recv(sd,buff,sizeof(buff),0);
 	if(len<1) goto end;
 	lastPacket = time(NULL);
-	if(!do_db_check()) return;
+	if(!do_db_check()) return
 	gamespy3dxor(buff, len);
 	buff[len]=0;
 	makeStringSafe((char *)&buff, sizeof(buff));
@@ -46,14 +45,8 @@ end:
 	 deleteClient(this);
 }
 void Client::sendError(int sd, bool fatal, char *msg, GPErrorCode errid, int id) {
-	size_t msglen = 0;
-
-	if(msg != NULL) {
-		msglen = strlen(msg);
-	}
-
-	int len = 128 + msglen;
-	char *errtext = (char *)calloc(1,len);
+	int len = 128 + strlen(msg);
+	char *errtext = (char *)malloc(len);
 	sprintf_s(errtext,len,"\\error\\\\err\\%d",errid);
 	if(fatal) {
 		strcat(errtext,"\\fatal\\");
@@ -91,7 +84,7 @@ void Client::parseIncoming() {
 	}
 }
 void Client::parseIncoming(char *buff, int len) {
-	char type[128] = { 0 };
+	char type[128];
 	char *next;
 	if(!find_param(0, buff, type,sizeof(type))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
@@ -144,7 +137,7 @@ void Client::clearGameKeys() {
 	gameKeys.clear();
 }
 void Client::handleUpdateGame(char *buff,int len) {
-	char gamedata[1024] = { 0 };
+	char gamedata[1024];
 	int done = find_paramint("done", buff);
 	if(!find_param("gamedata",buff,gamedata,sizeof(gamedata))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);	
@@ -156,26 +149,24 @@ void Client::handleUpdateGame(char *buff,int len) {
 		}
 	}
 	int i=0;
-	char sbuff[1024] = { 0 },value[1024] = { 0 };
+	char sbuff[1024],value[1024];
 	gameKey *key = NULL;
 	clearGameKeys();
 	while(find_param(i++,gamedata,sbuff,sizeof(sbuff))) {
-		key = (gameKey *)calloc(1,sizeof(gameKey));
+		key = (gameKey *)malloc(sizeof(gameKey));
 		if(key == NULL) {
 			break;
 		}
 		int xlen = strlen(sbuff) + 1;
-		key->name = (char *)calloc(1,xlen);
+		key->name = (char *)malloc(xlen);
 		if(key->name == NULL) {
 			break;
 		}
 		sprintf_s(key->name, xlen,"%s",sbuff);
 		if(find_param(i++,gamedata,value,sizeof(value))) {
 			int mlen = strlen(value) + 1;
-			key->value = (char *)calloc(1,mlen);
+			key->value = (char *)malloc(mlen);
 			sprintf_s(key->value,mlen,"%s",value);
-		} else {
-			key->value = NULL;
 		}
 		gameKeys.push_back(key);
 	}
@@ -204,8 +195,9 @@ int Client::getKeyStrSize() {
 }
 void Client::saveGame(bool done) {
 	int mlen = (getKeyStrSize() * 2) + 1;
-	char *savedata = (char *)calloc(1,mlen);
+	char *savedata = (char *)malloc(mlen);
 	if(savedata == NULL) return;
+	memset(savedata,0,mlen);
 	int len = 0;
 	std::list<gameKey *>::iterator it = gameKeys.begin();
 	gameKey *key;
@@ -216,7 +208,7 @@ void Client::saveGame(bool done) {
 			strcat(savedata,key->name);
 		}
 		strcat(savedata,"\\");
-		if(key->value != NULL) {
+		if(key->name != NULL) {
 			strcat(savedata,key->value);
 		}
 		it++;
@@ -250,13 +242,16 @@ void Client::saveGame(bool done) {
 	free((void *)savedata);	
 }
 void Client::handleAuth(char *buff,int len) {
-	char response[33] = { 0 },response2[33] = { 0 };
-	char gamename[64] = { 0 };
-	char keyhash[33] = { 0 };
+	char response[33],response2[33];
+	char gamename[64];
+	char keyhash[33];
+	memset(&response,0,sizeof(response));
+	memset(&response2,0,sizeof(response2));
 	if(!find_param("response", buff, response, sizeof(response))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		return;
 	}
+	memset(&gamename,0,sizeof(gamename));
 	if(!find_param("gamename", buff, gamename, sizeof(gamename))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		return;
@@ -280,10 +275,10 @@ void Client::handleAuth(char *buff,int len) {
 int Client::tryCdKeyLogin(char *keyhash) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	char query[256] = { 0 };
+	char query[256];
 	int pid;
 	int clen = (strlen(keyhash)*2)+1;
-	char *keyhashesc = (char *)calloc(1,clen);
+	char *keyhashesc = (char *)malloc(clen);
 	if(keyhashesc == NULL) return false;
 	mysql_real_escape_string(server.conn,keyhashesc,keyhash,strlen(keyhash));
 	sprintf_s(query,sizeof(query),"SELECT `profileid` FROM `GameTracker`.`authedcdkeys` WHERE md5(concat(\"%s\",cdkey)) = \"%s\" AND gameid = %d",challenge,keyhashesc,game->id);
@@ -300,7 +295,7 @@ int Client::tryCdKeyLogin(char *keyhash) {
 	return pid;
 }
 void Client::handleAuthP(char *buff,int len) {
-	char response[33] = { 0 };
+	char response[33];
 	int pid = find_paramint("pid",buff);
 	int lid = find_paramint("lid",buff);
 	/*
@@ -318,8 +313,8 @@ void Client::handleAuthP(char *buff,int len) {
 		formatSend(sd,true,2,"\\pauthr\\-1\\lid\\%d\\",lid);
 		return;
 	}
-	char pass[128] = { 0 };
-	char keyhash[33] = { 0 };
+	char pass[128];
+	char keyhash[33];
 	bool authed = false;
 	if(find_param("keyhash", buff, keyhash, sizeof(keyhash))) {
 		pid = tryCdKeyLogin(keyhash);
@@ -354,8 +349,8 @@ void Client::handleGetPD(char *buff,int len) {
 	}
 	int index = find_paramint("dindex",buff);
 	//the 1 = success
-	char query[256] = { 0 };
-	char kstr[256] = { 0 };
+	char query[256];
+	char kstr[256];
 	if(!find_param("keys",buff,kstr,sizeof(kstr))) {
 		//sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		//return;	
@@ -376,25 +371,24 @@ void Client::handleGetPD(char *buff,int len) {
 		formatSend(sd,true,2,"\\getpdr\\1\\lid\\0\\pid\\%d\\length\\%d\\data\\",pid,0);
 	} else {
 		row = mysql_fetch_row(res);
-		unsigned long* lengths = mysql_fetch_lengths(res);
 		int mlen = 1024;
 		char *sendstr = NULL;
 		int i=0;
-		char buff2[256] = { 0 };
+		char buff2[256];
 		int modified = atoi(row[1]);
 		if(strlen(kstr) < 1) {
-			sendstr = (char *)calloc(1,mlen);
+			mlen = strlen(kstr) + 1;
+			sendstr = (char *)malloc(mlen);
+			memset(sendstr,0,mlen);
 			strcat(sendstr,row[0]);
 		} else {
-			sendstr = (char *)calloc(1,mlen);
+			sendstr = (char *)malloc(mlen);
+			memset(sendstr,0,mlen);
 			while(find_param(i++,kstr,buff2,sizeof(buff2))) {
-				char buff3[256] = { 0 };
+				char buff3[256];
 //				printf("%s is kstr\n",buff2);
 //				memset(&buff2,0,sizeof(buff2));
-				char* data = new char[lengths[0]+1];
-				strncpy(data,row[0],lengths[0]);
-				data[lengths[0]] = '\0';
-				if(find_param((char *)&buff2,data,(char *)&buff3,sizeof(buff3))) {
+				if(find_param((char *)&buff2,row[0],(char *)&buff3,sizeof(buff3))) {
 					strcat(sendstr,"\\");
 					strcat(sendstr,buff2);
 					strcat(sendstr,"\\");
@@ -404,7 +398,6 @@ void Client::handleGetPD(char *buff,int len) {
 					}
 					strcat(sendstr,buff3);
 				}
-				delete[] data;
 			}
 		}
 		formatSend(sd,true,2,"\\getpdr\\1\\lid\\0\\pid\\%d\\mod\\%d\\length\\%d\\data\\%s",pid,modified,strlen(sendstr),sendstr);
@@ -416,7 +409,7 @@ void Client::handleGetPD(char *buff,int len) {
 bool Client::shouldUpdateData(int dindex, persisttype_t type, int pid) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	char query[256] = { 0 };
+	char query[256];
 	sprintf_s(query,sizeof(query),"SELECT 1 FROM `Persist`.`data` WHERE `profileid` = %d AND `type` = %d AND `index` = %d  AND `gameid` = %d",pid,type,dindex,game->id);
 	if(mysql_query(server.conn,query)) {
 		fprintf(stderr,"%s\n",mysql_error(server.conn));
@@ -430,7 +423,7 @@ bool Client::shouldUpdateData(int dindex, persisttype_t type, int pid) {
 char *Client::mergeKeys(char *keys,int localid,persisttype_t type,int index,int pid) {
 	char *curkeys;
 	char *rkeys = NULL;
-	char query[256] = { 0 };
+	char query[256];
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	sprintf_s(query,sizeof(query),"SELECT `data` FROM `Persist`.`data` WHERE `profileid` = %d AND `index` = %d AND `type` = %d",pid,index,type);
@@ -444,13 +437,13 @@ char *Client::mergeKeys(char *keys,int localid,persisttype_t type,int index,int 
 		break;
 	}
 	int mlen = strlen(keys) + strlen(curkeys) + 1;
-	rkeys = (char *)calloc(1,mlen);
+	rkeys = (char *)malloc(mlen);
 	if(rkeys == NULL) {
-		mysql_free_result(res);
 		return keys;
 	}
+	memset(rkeys,0,mlen);
 	int i = 0;
-	char sbuff[1024] = { 0 },kbuff[1024] = { 0 };
+	char sbuff[1024],kbuff[1024];
 	while(find_param(i,curkeys,sbuff,sizeof(sbuff))) {
 		if(!find_param(sbuff,keys,kbuff,sizeof(kbuff))) {
 			if(find_param(sbuff,curkeys,kbuff,sizeof(kbuff))) {
@@ -513,9 +506,10 @@ void Client::handleSetPD(char *buff,int len) {
 	}
 	int mlen = (strlen(savedata) * 2) + 1;
 	int slen = mlen + 256;
-	char *escapestr = (char *)calloc(1,mlen);
+	char *escapestr = (char *)malloc(mlen);
+	memset(escapestr,0,mlen);
 	mysql_real_escape_string(server.conn,escapestr,savedata,strlen(savedata));
-	char *querystr = (char *)calloc(1,slen);
+	char *querystr = (char *)malloc(slen);
 	if(update) {
 	sprintf_s(querystr,slen, "UPDATE `Persist`.`data` SET `data` = \"%s\", `modified` = CURRENT_TIMESTAMP WHERE `profileid` = %d AND `index` = %d AND `type` = %d AND `gameid` = %d",escapestr,pid,dindex,type,game->id);
 	} else {
@@ -534,9 +528,9 @@ void Client::handleSetPD(char *buff,int len) {
 void Client::getLoginResponse(char *sesskey, char *pass, char *out, int dstlen) {
     md5_context         md5t;
     const static char   hex[] = "0123456789abcdef";
-    unsigned char       md5h[16] = { 0 };
+    unsigned char       md5h[16];
     int                 i;
-    unsigned char data[33] = { 0 };
+    unsigned char data[33];
     int len;
     len = sprintf_s((char *)data,sizeof(data),"%s%s",pass,sesskey);
     md5_starts(&md5t);
@@ -552,9 +546,9 @@ void Client::getLoginResponse(char *sesskey, char *pass, char *out, int dstlen) 
 void Client::getResponse(int chrespnum, char *secretkey, char *out, int dstlen) {
     md5_context         md5t;
     const static char   hex[] = "0123456789abcdef";
-    unsigned char       md5h[16] = { 0 };
+    unsigned char       md5h[16];
     int                 i;
-    unsigned char data[33] = { 0 };
+    unsigned char data[33];
     int len;
     len = sprintf_s((char *)data,sizeof(data),"%d%s",chrespnum,secretkey);
     md5_starts(&md5t);

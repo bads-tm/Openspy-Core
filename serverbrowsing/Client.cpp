@@ -1,6 +1,5 @@
 #include "Client.h"
 #include "server.h"
-#include <cstddef>
 Client::Client(int sd, struct  sockaddr_in peer) {
 	this->sd = sd;
 	querygame = NULL;
@@ -17,16 +16,16 @@ Client::Client(int sd, struct  sockaddr_in peer) {
 	fromip = 0;
 	memcpy(&this->peer,&peer,sizeof(sockaddr_in));
 	memset(&encxkeyb,0,sizeof(encxkeyb));
-	lastKeepAlive = time(NULL);
+	lastKeepAlive = 0;
 	game = NULL;
 	queryGame = NULL;
 	cryptHeaderSent = false;
 	headerLen = 0;
 	nextMsgMsgReq = false;
-	deleteMe = false;
 }
 void Client::processConnection(fd_set *rset) {
-	char buf[MAX_OUTGOING_REQUEST_SIZE + 1] = { 0 };
+	char buf[MAX_OUTGOING_REQUEST_SIZE + 1];
+	char type[128];
 	int len;
 	if(!FD_ISSET(sd,rset)) {
 		return;
@@ -35,7 +34,7 @@ void Client::processConnection(fd_set *rset) {
 //	makeStringSafe((char *)&buf, sizeof(buf));
 	/*
 	if(len == -1 && time(NULL)-120 > lastKeepAlive) {
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	} else if(len == -1) { //timeout, send keep-alive
 		char *p = (char *)&buf;
@@ -43,11 +42,11 @@ void Client::processConnection(fd_set *rset) {
 		BufferWriteByte((uint8_t**)&p,(uint32_t *)&len,KEEPALIVE_MESSAGE);
 		enctypex_func6e((unsigned char *)&encxkeyb,(unsigned char *)p,len);
 		if(send(sd,buf,len,MSG_NOSIGNAL) < 0) {
-			deleteMe = true;
+			deleteClient(this);
 			return;
 		}		
 	} else*/ if(len==0 || len == -1) { //disconnected
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	char *p = (char *)&buf;	
@@ -83,7 +82,7 @@ Client::~Client() {
 void Client::handleData(uint8_t *buff, uint32_t len) {
 	int remaining = len;
 	this->lastKeepAlive = time(NULL);
-	while(remaining > 3) {
+	while(remaining) {
 //		printf("found packet type: %02X %d %d\n",buff[2],remaining,len);
 		if(nextMsgMsgReq == true) {
 			nextMsgMsgReq = false;
@@ -139,7 +138,6 @@ int Client::handleMessageRequest(uint8_t *buff, uint32_t len) {
 	return len;
 }
 int Client::handleListRequest(uint8_t *buff, uint32_t len) {
-	char errmsg[128] = { 0 };
 	buff += 3; //skip the length and request type
 	len -= 3;
 	uint8_t listversion,encodingversion;
@@ -173,13 +171,14 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 	this->srcip = srcip;
 	this->maxservers = maxServers;
 	fromip = peer.sin_addr.s_addr;
-//	memcpy(&challenge,challenge,sizeof(challenge));
+	memcpy(&challenge,challenge,sizeof(challenge));
 	game = servoptions.gameInfoNameProc((char *)gamename);
 	queryGame = servoptions.gameInfoNameProc((char *)querygame);
+	char errmsg[128];
 	if(game != NULL && game->servicesdisabled != 0) {
 		uint8_t *buff,*p;
 		uint32_t len = 0;
-		buff = (uint8_t *)calloc(1, 128);
+		buff = (uint8_t *)malloc(128);
 		if(buff == NULL) return 0;
 		p = buff;
 		switch(game->servicesdisabled) {
@@ -196,12 +195,12 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)&errmsg);
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteMe = true;
+		deleteClient(this);
 		return len;
 	} else if(queryGame != NULL && queryGame->servicesdisabled != 0) {
 		uint8_t *buff,*p;
 		uint32_t len = 0;
-		buff = (uint8_t *)calloc(1, 128);
+		buff = (uint8_t *)malloc(128);
 		if(buff == NULL) return 0;
 		p = buff;
 		switch(queryGame->servicesdisabled) {
@@ -218,7 +217,7 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)&errmsg);
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteMe = true;
+		deleteClient(this);
 		return len;
 	}
 	this->options = options;
@@ -238,14 +237,14 @@ int Client::handleListRequest(uint8_t *buff, uint32_t len) {
 void Client::sendIP() {
 	uint8_t *buff,*p;
 	uint32_t len = 0;
-	buff = (uint8_t *)calloc(1, 128);
+	buff = (uint8_t *)malloc(128);
 	if(buff == NULL) return;
 	p = buff;
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)buff,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -266,25 +265,25 @@ void Client::sendGroups() {
 	uint32_t len = 0;
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	char query[256] = { 0 };
-	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
+	char query[256];
+	char field[MAX_FIELD_LIST_LEN + 1];
 	int fi = 0;
 	bool sendPacket = false;
-	buff = (uint8_t *)calloc(1, MAX_OUTGOING_REQUEST_SIZE * 2); //* 2 just in case it goes over the buffer size
+	buff = (uint8_t *)malloc(MAX_OUTGOING_REQUEST_SIZE * 2); //* 2 just in case it goes over the buffer size
 	if(buff == NULL) return;
 	p = buff;
 	if(!do_db_check()) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)"Database Error: Database Connection Lost");
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&buff, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)p,len,MSG_NOSIGNAL);
 		free((void *)p);
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -304,14 +303,13 @@ void Client::sendGroups() {
 	if (mysql_query(conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
 		free((void *)p);
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	bool hasMaxServers = maxservers != 0;
 	res = mysql_store_result(conn);
 	while((row = mysql_fetch_row(res)) != NULL && (!hasMaxServers || maxservers--)) {
-		unsigned long* lengths = mysql_fetch_lengths(res);
-		addGroupBuff((char **)&buff,(int *)&len ,(char *)fieldlist,row,lengths);
+		addGroupBuff((char **)&buff,(int *)&len ,(char *)fieldlist,row);
 		if(len > MAX_OUTGOING_REQUEST_SIZE) {
 			cryptHeaderSent = true;
 			enctypex_func6e((unsigned char *)&encxkeyb,(unsigned char *)p+headerLen,len-headerLen);
@@ -330,11 +328,10 @@ void Client::sendGroups() {
 	send(sd,(const char *)p,len,MSG_NOSIGNAL);
 	free((void *)p);
 }
-void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, unsigned long* lengths) {
+void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row) {
 	peerchatMsgData peerchatMsg;
 	msgNumUsersOnChan *numUsersMsg;
-	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
-	char fielddata[MAX_FIELD_LIST_LEN + 1] = { 0 };
+	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
 	int i=0;
 	BufferWriteByte((uint8_t **)buff,(uint32_t *)len,HAS_KEYS_FLAG);
 	BufferWriteIntRE((uint8_t **)buff,(uint32_t *)len,atoi(row[0]));
@@ -344,11 +341,8 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, 
 			BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)row[1]);
 		} else if(strcasecmp(field,"numplayers") == 0) { //number of peerchat users in channel
 			peerchatMsg.msgid = (char)EMsgID_NumUsersOnChan;
-			numUsersMsg = (msgNumUsersOnChan *)calloc(1, sizeof(msgNumUsersOnChan));
-			if(numUsersMsg == NULL) {
-				fprintf(stderr, "Unable to allocate memory");
-				exit(1);
-			}
+			numUsersMsg = (msgNumUsersOnChan *)malloc(sizeof(msgNumUsersOnChan));
+			if(numUsersMsg == NULL) continue;
 			peerchatMsg.data = (void *)numUsersMsg;
 			memset(numUsersMsg,0,sizeof(msgNumUsersOnChan));
 			sprintf_s(numUsersMsg->channelName,sizeof(numUsersMsg->channelName),"#GPG!%u",atoi(row[0]));
@@ -359,7 +353,7 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, 
 			free(numUsersMsg);
 		} else if(strcasecmp(field,"numservers") == 0) {
 			int numservers = getNumberOfServers(atoi(row[0]));
-			char stext[32] = { 0 };	
+			char stext[32];	
 			sprintf_s(stext,sizeof(stext),"%d",numservers);
 			BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)stext);
 		}  else if(strcasecmp(field,"numwaiting") == 0) {
@@ -367,18 +361,12 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, 
 		} else if(strcasecmp(field,"maxwaiting") == 0) {
 			BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)row[2]);
 		} else {
-			if(lengths[3]) {
-				char* other = new char[lengths[3]+1];
-				strncpy(other,row[3],lengths[3]);
-				other[lengths[3]] = '\0';
-				if(find_param(field,other,(char *)&fielddata,sizeof(fielddata))) {
+			if(row[3] != NULL) {
+				if(find_param(field,row[3],(char *)&fielddata,sizeof(fielddata))) {
 					BufferWriteNTS((uint8_t **)buff, (uint32_t *)len, (uint8_t*)&fielddata);
 				} else {
 					BufferWriteByte((uint8_t **)buff,(uint32_t *)len,0x00);
 				}
-				delete[] other;
-			} else {
-				BufferWriteByte((uint8_t **)buff,(uint32_t *)len,0x00);
 			}
 		}
 	}
@@ -386,10 +374,9 @@ void Client::addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, 
 }
 char *Client::findServerValue(char *name,serverList list) {
 	std::list<customKey *>::iterator skeys = list.serverKeys.begin();
-	std::list<customKey *>::iterator end = list.serverKeys.end();
 	customKey *key;
 	if(name == NULL) return NULL;
-	while(skeys != end) {
+	while(skeys != list.serverKeys.end()) {
 		key = *skeys;
 		if(key != NULL) {
 			if(key->name != NULL) {
@@ -403,19 +390,16 @@ char *Client::findServerValue(char *name,serverList list) {
 	return NULL;
 }
 void Client::addServerBuff(char **buff,int *len, serverList slist) {
-	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
-	char fielddata[MAX_FIELD_LIST_LEN + 1] = { 0 };
+	peerchatMsgData peerchatMsg;
+	msgNumUsersOnChan *numUsersMsg;
+	char field[MAX_FIELD_LIST_LEN + 1],fielddata[MAX_FIELD_LIST_LEN + 1];
 	char *fdata;
 	int i=0;
 	uint8_t flags = 0;
 	if((fdata = findServerValue("natneg",slist)) != NULL) {
 		if(atoi(fdata) != 0) {
 			flags |= CONNECT_NEGOTIATE_FLAG; //not really used in the sdk it seems though
-		} else {
-			flags |= UNSOLICITED_UDP_FLAG;
 		}
-	} else {
-		flags |= UNSOLICITED_UDP_FLAG;
 	}
 	uint32_t privip = 0;
 	uint16_t hostport = slist.port;
@@ -427,11 +411,9 @@ void Client::addServerBuff(char **buff,int *len, serverList slist) {
 			privip = addr;
 		}
 	}
-	/*
 	if((fdata = findServerValue("hostport",slist)) != NULL) {
 		hostport = htons(atoi(fdata));
 	}
-	*/
 	if((fdata = findServerValue("localport",slist)) != NULL) {
 		localport = htons(atoi(fdata));
 		if(localport != htons(queryGame->queryport)) {
@@ -474,18 +456,20 @@ void Client::addServerBuff(char **buff,int *len, serverList slist) {
 	}
 }
 void Client::sendServers() {
-	uint8_t buff[MAX_OUTGOING_REQUEST_SIZE * 2] = { 0 };
+	uint8_t buff[MAX_OUTGOING_REQUEST_SIZE * 2];
 	uint8_t *p;
 	uint16_t num_params = 0;
 	uint32_t len = 0;
-	char field[MAX_FIELD_LIST_LEN + 1] = { 0 };
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	char field[MAX_FIELD_LIST_LEN + 1];
 	int fi = 0;
 	bool sendPacket = false;
 	p = (uint8_t *)&buff;
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&p, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)buff,len,MSG_NOSIGNAL);
-		deleteMe = true;
+		deleteClient(this);
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -509,24 +493,20 @@ void Client::sendServers() {
 	msg.msgID = EQRMsgID_GetServer;
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
-	std::list<serverList>::iterator end = listData.server_list.end();
 	serverList slist;
 	bool hasMaxServers = maxservers != 0;
 	int maxservers = this->maxservers;
-	while(iterator != end ) {
+	while(iterator != listData.server_list.end() && (!hasMaxServers || maxservers--) && listData.numServers--) {
 		slist = *iterator;
-		if( (!hasMaxServers || (maxservers && maxservers--)) && (listData.numServers && listData.numServers--)) {
-			addServerBuff((char**)&p,(int *)&len,slist);
-			if(len > MAX_OUTGOING_REQUEST_SIZE) {
-				cryptHeaderSent = true;
-				enctypex_func6e((unsigned char *)&encxkeyb,((unsigned char *)&buff)+headerLen,len-headerLen);
-				send(sd,(const char *)buff,len,MSG_NOSIGNAL);
-				headerLen = 0;
-				len = 0;
-				p = (uint8_t *)&buff;
-			}
+		addServerBuff((char**)&p,(int *)&len,slist);
+		if(len > MAX_OUTGOING_REQUEST_SIZE) {
+			cryptHeaderSent = true;
+			enctypex_func6e((unsigned char *)&encxkeyb,((unsigned char *)&buff)+headerLen,len-headerLen);
+			send(sd,(const char *)buff,len,MSG_NOSIGNAL);
+			headerLen = 0;
+			len = 0;
+			p = (uint8_t *)&buff;
 		}
-		freeServerRuleList(slist.serverKeys);
 		iterator++;
 	}
 	BufferWriteByte((uint8_t **)&p,(uint32_t *)&len,0x00);
@@ -535,21 +515,22 @@ void Client::sendServers() {
 	enctypex_func6e((unsigned char *)&encxkeyb,((unsigned char *)&buff)+headerLen,len-headerLen);
 	headerLen = 0;
 	send(sd,(const char *)buff,len,MSG_NOSIGNAL);
+	freeServerRuleList(slist.serverKeys);
 	return;
 }
 void Client::setupCryptHeader(uint8_t **dst, uint32_t *len) { 
 //	memset(&options->cryptkey,0,sizeof(options->cryptkey));
 	srand(time(NULL));
 	uint32_t cryptlen = CRYPTCHAL_LEN;
-	uint8_t cryptchal[CRYPTCHAL_LEN] = { 0 };
+	uint8_t cryptchal[CRYPTCHAL_LEN];
 	uint32_t servchallen = SERVCHAL_LEN;
-	uint8_t servchal[SERVCHAL_LEN] = { 0 };
+	uint8_t servchal[SERVCHAL_LEN];
 	headerLen = (servchallen+cryptlen)+(sizeof(uint8_t)*2);
 	uint16_t *backendflags = (uint16_t *)(&cryptchal);
 	for(uint32_t i=0;i<cryptlen;i++) {
 		cryptchal[i] = (uint8_t)rand();		
 	}
-	*backendflags = htons(queryGame->backendflags);
+	*backendflags = queryGame->backendflags;
 	for(uint32_t i=0;i<servchallen;i++) {
 		servchal[i] = (uint8_t)rand();		
 	}
@@ -575,28 +556,23 @@ int Client::handleInfoRequest(uint8_t *buff, uint32_t len) {
 	qrRules.port = (port);
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	sendServerRules(qrRules.server_rules,ip,port);
-	freeServerRuleList(qrRules.server_rules);
 	return len;
 }
 void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, uint16_t port) {
-	std::list<customKey *>::iterator it, end;
-	size_t outbuffsize = 4096;
-	uint8_t* outbuff = (uint8_t*)calloc(1,outbuffsize);
-	uint8_t *p,*x;
+	std::list<customKey *>::iterator it;
+	uint8_t outbuff[1024],*p,*x;
 	uint32_t len = 0;
 	uint8_t flags = 0;
 	serverList slist;
-	slist.ipaddr = 0;
 	customKey *key;
-	p = outbuff;
-	x = outbuff;
+	p = (uint8_t *)&outbuff;
+	x = (uint8_t *)&outbuff;
 	char *fdata;
 	if(game == NULL || queryGame == NULL) {
 		BufferWriteNTS(&p, &len, (uint8_t *)"Query Error: Invalid gamename or clientname");
 		send(sd,(const char *)outbuff,len,MSG_NOSIGNAL);
-		//free((void *)p);
-		deleteMe = true;
-		free(outbuff);
+		free((void *)p);
+		deleteClient(this);
 		return;
 	}
 	if(!cryptHeaderSent) {
@@ -652,27 +628,14 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 		BufferWriteShort(&p,&len,localport);
 	}
 	BufferWriteInt(&p,&len,ip);	
-//	printf("sendServerRules %#x %#x %s %s %u %u",ip,port,game->name,queryGame->name,server_rules.size(),slist.serverKeys.size());
 	it = server_rules.begin();
-	end = server_rules.end();
-	while(it != end) {
+	while(it != server_rules.end()) {
 		key = *it;
-		size_t newstuff = strlen(key->name) + strlen(key->value);
-		if((p - x + newstuff) > (outbuffsize / 2)) {
-			ptrdiff_t pd = p - outbuff;
-			ptrdiff_t xd = x - outbuff;
-//			printf(" realloc %u %u",outbuffsize,outbuffsize+newstuff+4096);
-			outbuff = (uint8_t*)realloc(outbuff,outbuffsize+newstuff+4096);
-			memset(outbuff+outbuffsize,0,newstuff+4096);
-			outbuffsize += newstuff+4096;
-			p = outbuff + pd;
-			x = outbuff + xd;
-		}
 		BufferWriteNTS(&p,&len,(uint8_t*)key->name);
 		BufferWriteNTS(&p,&len,(uint8_t*)key->value);
 		it++;
 	}
-//	printf("\n");
+	freeServerRuleList(server_rules);
 	BufferWriteByte(&p,&len,0);
 	uint16_t *y = (uint16_t *)x;
 	*y = reverse_endian16((uint16_t)len);
@@ -680,14 +643,12 @@ void Client::sendServerRules(std::list<customKey *> server_rules,uint32_t ip, ui
 	cryptHeaderSent = true;
 	headerLen = 0;
 	send(sd,(const char *)x,len,MSG_NOSIGNAL|MSG_DONTWAIT);
-	free(outbuff);
 }
 void Client::freeServerRuleList(std::list<customKey *> slist) {
-	std::list<customKey *>::iterator it, end;
+	std::list<customKey *>::iterator it;
 	customKey *key;
 	it = slist.begin();
-	end = slist.end();
-	while(it != end) {
+	while(it != slist.end()) {
 		key = *it;
 		if(key->name != NULL) free((void *)key->name);
 		if(key->value != NULL) free((void *)key->value);
@@ -708,11 +669,8 @@ time_t Client::getLastPing() {
 	return lastKeepAlive;
 }
 void Client::sendKeyList() {
-	uint8_t buff[512] = { 0 };
+	uint8_t buff[512];
 	uint32_t len = 0;
-	if(game == NULL || queryGame == NULL) {
-		return;
-	}
 	uint8_t num_keys = queryGame->numPushKeys;
 	uint8_t *p = (uint8_t *)&buff;
 	if(!cryptHeaderSent) {
@@ -733,7 +691,7 @@ void Client::sendKeyList() {
 	send(sd,(char *)&buff,len,MSG_NOSIGNAL|MSG_DONTWAIT);
 }
 void Client::delServer(serverList slist) {
-	uint8_t data[256] = { 0 };
+	uint8_t data[256];
 	uint8_t *p = (uint8_t *)(&data);
 	uint16_t *olen = (uint16_t *)&data[0];
 	uint32_t len = 0;
@@ -751,7 +709,7 @@ void Client::delServer(serverList slist) {
 	send(sd,(char *)&data,len,MSG_NOSIGNAL|MSG_DONTWAIT);
 }
 void Client::pushServer(serverList slist) {
-	uint8_t data[256] = { 0 };
+	uint8_t data[256];
 	uint32_t len = 0;
 	uint8_t flags = 0;
 	char *fdata;
@@ -843,19 +801,18 @@ int Client::getNumberOfServers(uint16_t groupid) {
 	qrServerList listData;
 	msg.data = (void *)&listData;
 	listData.game = queryGame;
-	char filter[256] = { 0 };
+	char filter[256];
 	sprintf_s(filter,sizeof(filter),"groupid=%d",groupid);
 	listData.filter = (uint8_t *)&filter;
 	msg.msgID = EQRMsgID_GetServer;
 	servoptions.sendMsgProc(moduleInfo.name,"qr",(void *)&msg,sizeof(qrServerMsg));
 	std::list<serverList>::iterator iterator = listData.server_list.begin();
-	std::list<serverList>::iterator end = listData.server_list.end();
 	int i = 0;
 	serverList slist;
-	while(iterator != end ) {
+	while(iterator != listData.server_list.end() && listData.numServers--) {
 		slist = *iterator;
 		freeServerRuleList(slist.serverKeys);
-		if( listData.numServers && listData.numServers--) i++;
+		i++;
 		iterator++;
 	}
 	return i;

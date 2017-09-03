@@ -18,13 +18,12 @@ public:
 	time_t getLastPing();
 	time_t getConnectTime();
 	void processConnection(fd_set *rset);
-	bool deleteMe;
 private:
 	void sendCryptHeader();
 	void handleData(uint8_t *buff,uint32_t len);
 	void handleValidation(uint8_t *buff,uint32_t len);
 	void handleList(uint8_t *buff,uint32_t len);
-	void sendServers(gameInfo *queryGame, char *filter, bool basic = false);
+	void sendServers(gameInfo *queryGame, char *filter);
 	void sendGroups(gameInfo *queryGame);
 	void freeServerRuleList(std::list<customKey *> slist);
 	void senddata(char *buff, int len, bool sendFinal = false, bool initPacket = false, bool noEncryption = false, bool actualSend = false);

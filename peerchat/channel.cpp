@@ -59,21 +59,15 @@ char *Channel::getName() {
 }
 void Channel::addUser(chanClient *user) {
 	chanClient *chan_client=(chanClient *)malloc(sizeof(chanClient));
-
-	if(chan_client == NULL) {
-		fprintf(stderr, "Unable to allocate memory for channel client");
-		exit(1);
-	}
-	
 	char *unick;
-	if(user == NULL) {
-		free((void *)chan_client);
+	if(user == NULL) return;
+	if(user->client == NULL) return;
+	if(chan_client == NULL) {
+		if(user->client != NULL) {
+			user->client->send_numeric(473,"%s :Cannot join channel (Failed to allocate memory for chanClient)",getName());
+		}
 		return;
-	};
-	if(user->client == NULL) {
-		free((void *)chan_client);
-		return;
-	};
+	}
 	user_list.push_back(chan_client);
 	user->client->getUserInfo(&unick,NULL,NULL,NULL);
 	memcpy(chan_client,user,sizeof(chanClient));
@@ -1111,7 +1105,6 @@ void Channel::clearProps() {
 	if(curkey != NULL) {
 		if(key->value[0] == 0) {
 			chanKeys.remove(curkey);
-			free(curkey);
 			return false;
 		}
 		strcpy(curkey->value,key->value);
@@ -1185,7 +1178,6 @@ void Channel::clearnonGlobalModes() {
 		if(strcmp(usermode->chanmask,getName()) == 0) {
 			if(usermode->isGlobal == 0) {
 				server.usermodes_list.remove(usermode);
-				free(usermode);
 				iterator=server.usermodes_list.begin();
 				continue;
 			}

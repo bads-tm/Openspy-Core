@@ -29,7 +29,7 @@ void strip(char *buff, char delim) {
 }
 
 void find_and_replace(char *buff, char delim, int ch) {
-	for(size_t i=0;i<strlen(buff);i++) {
+	for(int i=0;i<strlen(buff);i++) {
 		if(buff[i]==delim) {
 			buff[i]=ch;
 		}
@@ -179,14 +179,13 @@ int find_paramint(int num, char *buff) {
 bool find_param(char *name, char *buff, char *dst, int dstlen) {
 
 	char *loc;
-	int distance = 0;
+	int distance;
 	if(buff == NULL || name == NULL || dst == NULL || dstlen == 0) return false;
 	if(*buff == '\\') {
 		buff++;
 	}
 	memset(dst,0,dstlen);
-	char* term = strchr(buff, '\0');
-	while(buff < term) {
+	while(*buff) {
 		loc = strchr(buff, '\\');
 		if(loc != NULL) {
 			distance = loc-buff;
@@ -213,14 +212,13 @@ bool find_param(int num, char *buff, char *dst, int dstlen) {
 		return 0;
 	}
 	char *loc;
-	int distance = 0;
+	int distance;
 	int i=0;
 	memset(dst,0,dstlen);
 	if(buff[0] == '\\') {
 		buff++;
 	}
-	char* term = strchr(buff, '\0');
-	while(buff < term) {
+	while(*buff) {
 		loc = strchr(buff, '\\');
 		distance = loc-buff;
 		if(i == num) {
@@ -355,26 +353,20 @@ void gamespy3dxor(char *data, int len) {
 int formatSend(int sd, bool putFinal, char enc, char *fmt, ...) {
 	va_list vars;
 	int len = 0;
-	size_t bufsize = 1024;
-	char* buf = (char*)calloc(1,bufsize);
-	std::string sfmt(fmt);
-	if(putFinal) sfmt += "\\final\\";
-	for (char i = 0; i < 2; ++i) {
-		va_start (vars, fmt);
-		len = vsnprintf(buf,bufsize,sfmt.c_str(), vars);
-		va_end(vars);
-		if (len < bufsize) break;
-		else {
-			bufsize = len+1;
-			buf = (char*)realloc(buf,bufsize);
-		}
+	char buf[1024];
+	memset(&buf,0,sizeof(buf));
+	va_start (vars, fmt);
+	len = vsnprintf(buf,sizeof(buf),fmt, vars);
+	va_end(vars);
+	if(putFinal) {
+		strcat(buf,"\\final\\");
 	}
 	printf("sending: %s\n",buf);
 	if(enc == 1) {
-//		len = strlen(buf);
+		len = strlen(buf);
 		gamespyxor(buf,len);
 	} else if(enc == 2) {
-//		len = strlen(buf);
+		len = strlen(buf);
 //		if(!putFinal) len -= 7;//length of final + slashes
 		gamespy3dxor(buf,len);
 		if(putFinal == true) { //gamespy doesn't enc final part :X
@@ -383,11 +375,9 @@ int formatSend(int sd, bool putFinal, char enc, char *fmt, ...) {
 //			len+=7;
 		}	
 	} else {
-//		len = strlen(buf);
+		len = strlen(buf);
 	}
-	int result = send(sd,buf,len,MSG_NOSIGNAL);
-	free(buf);
-	return result;
+	return send(sd,buf,len,MSG_NOSIGNAL);
 }
 
 int gslame(int num) {
@@ -414,11 +404,12 @@ int gslame(int num) {
 
 
 int gspassenc(uint8_t *pass) {
-    int     a,
+    int     i,
+            a,
             c,
             d,
-            num;
-    size_t  passlen;
+            num,
+            passlen;
 
     passlen = strlen((const char *)pass);
     num = 0x79707367;   // "gspy"
@@ -428,7 +419,7 @@ int gspassenc(uint8_t *pass) {
         num &= 0x7fffffff;
     }
 
-    for(size_t i = 0; i < passlen; i++) {
+    for(i = 0; i < passlen; i++) {
         d = 0xff;
         c = 0;
         d -= c;
@@ -447,11 +438,10 @@ int gspassenc(uint8_t *pass) {
 
 
 uint8_t *base64_encode(uint8_t *data, int *size) {    // Gamespy specific!!!
-    int     a,
+    int     len,
+            a,
             b,
             c;
-    size_t  len;
-
     uint8_t      *buff,
             *p;
     static const uint8_t base[64] = {
@@ -490,13 +480,12 @@ uint8_t *base64_encode(uint8_t *data, int *size) {    // Gamespy specific!!!
 
 
 uint8_t *base64_decode(uint8_t *data, int *size) {
-    int     a   = 0,
+    int     len,
+            xlen,
+            a   = 0,
             b   = 0,
             c,
             step;
-    size_t  len,
-            xlen;
-
     uint8_t      *buff,
             *limit,
             *p;
@@ -590,7 +579,7 @@ char allowed[]=
 	return false;
 }
 void makeValid(char *name) {
-	for(size_t i=0;i<strlen(name);i++) {
+	for(int i=0;i<strlen(name);i++) {
 		if(!charValid(name[i])) {
 			name[i] = '_';
 		}
@@ -598,13 +587,13 @@ void makeValid(char *name) {
 }
 bool nameValid(char *name, bool peerchat) {
 	char bad_starters[] = "#@+&%";
-	for(size_t i=0;i<sizeof(bad_starters);i++) {
+	for(int i=0;i<sizeof(bad_starters);i++) {
 		if(name[0]==bad_starters[i]) {
 			if(name[0] != '\\' || !peerchat)
 				return false;
 		}
 	}
-	for(size_t i=0;i<strlen(name);i++) {
+	for(int i=0;i<strlen(name);i++) {
 		if(!charValid(name[i])) {
 			if(name[i] != '\\' || !peerchat)
 				return false;
@@ -624,11 +613,11 @@ int countchar(char *str, char ch, int len) {
 int countchar(char *str, char ch) {
 	return countchar(str,ch,strlen(str));
 }
-size_t makeStringSafe(char *buff, int len) {
+int makeStringSafe(char *buff, int len) {
 	char *obuff = (char *)malloc(len*2);
 	memset(obuff,0,len*2);
 	char *p = obuff;
-	size_t i;
+	int i;
 	for(i=0;i<len;i++) {
 		*(obuff++) = buff[i];
 //		if(buff[i] == '%') buff[i] = '_';

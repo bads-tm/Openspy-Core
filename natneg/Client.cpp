@@ -4,11 +4,9 @@ extern serverInfo server;
 extern modLoadOptions servoptions;
 Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 	connecttime = time(NULL);
-	sentconnecttime = NULL;
 	game = NULL;
 	this->sd = sd;
 	memcpy(&sockinfo,peer,sizeof(struct sockaddr_in));
-	memcpy(&punching,peer,sizeof(struct sockaddr_in));
 	lastPacket = time(NULL);
 	version = 0;
 	cookie = 0;
@@ -17,12 +15,10 @@ Client::Client(int sd, struct sockaddr_in *peer, int instance) {
 	connected = false;
 	gotInit = false;
 	gotConnectAck = false;
-	deleteMe = false;
 }
 Client::~Client() {
 }
 void Client::handleIncoming(char *buff, int len) {
-	if(deleteMe) return;
 	NatNegPacket *packet = (NatNegPacket *)(buff);
 	if(memcmp(packet->magic, NNMagicData, NATNEG_MAGIC_LEN) != 0) { //not a natneg packet
 		return; 
@@ -59,26 +55,12 @@ void Client::handleReport(NatNegPacket *packet) {
 }
 void Client::handleInitPacket(NatNegPacket *packet) {
 	version = packet->version;
-	if ((version>1) && (packet->Packet.Init.porttype==1)) {
-		Client *c;
-		if((c = find_user_by_cookie_index(packet->cookie, instance, packet->Packet.Init.clientindex)) != NULL) {
-			if(c != this) {
-				punching.sin_port = c->punching.sin_port;
-				deleteClient(c);
-			}
-		}
-	}
 	cookie = packet->cookie;
 	cindex = packet->Packet.Init.clientindex;
 	packet->packettype = NN_INITACK;
 	sendto(sd,(char *)packet,INITPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
-	if (packet->Packet.Init.porttype>1) {
-		//TODO: port guessing
-		deleteClient(this);
-		return;
-	}
 	gotInit = true;
-	if ((version<2) || (packet->Packet.Init.porttype==1)) trySendConnect();
+	trySendConnect();
 }
 void Client::trySendConnect(bool sendToOther) {
 	Client *c;
@@ -98,9 +80,7 @@ void Client::handleAddressCheck(NatNegPacket *packet) {
 	sendto(sd,(char *)packet,INITPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
 }
 void Client::SendConnectPacket(Client *user, bool sendToOther) {
-	NatNegPacket sendpacket = {0};
-	sendpacket.version = version;
-	sendpacket.Packet.Connect.gotyourdata = 'B';
+	NatNegPacket sendpacket;
 	sendpacket.packettype = NN_CONNECT;
 	sendpacket.cookie = cookie;
 	memcpy(sendpacket.magic, NNMagicData, NATNEG_MAGIC_LEN);
@@ -108,14 +88,14 @@ void Client::SendConnectPacket(Client *user, bool sendToOther) {
 	if(instance != 1 || gotConnectAck || user->gotConnectAck || !gotInit) return;
 	user->connected = true;
 	connected = true;
-	sendpacket.Packet.Connect.remoteIP = user->punching.sin_addr.s_addr;
-	sendpacket.Packet.Connect.remotePort = user->punching.sin_port;
+	sendpacket.Packet.Connect.remoteIP = user->sockinfo.sin_addr.s_addr;
+	sendpacket.Packet.Connect.remotePort = user->sockinfo.sin_port;
 	sendto(sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&sockinfo,sizeof(struct sockaddr));
 	sentconnecttime = time(NULL);
 	if(!sendToOther) return;
 	user->sentconnecttime = time(NULL);
-	sendpacket.Packet.Connect.remoteIP = punching.sin_addr.s_addr;
-	sendpacket.Packet.Connect.remotePort = punching.sin_port;
+	sendpacket.Packet.Connect.remoteIP = sockinfo.sin_addr.s_addr;
+	sendpacket.Packet.Connect.remotePort = sockinfo.sin_port;
 	sendto(user->sd,(char *)&sendpacket,CONNECTPACKET_SIZE,0,(struct sockaddr *)&user->sockinfo,sizeof(struct sockaddr));
 }
 void Client::handleNatifyRequest(NatNegPacket *packet) {
@@ -158,7 +138,6 @@ void Client::sendDeadBeatNotice() {
 	if(instance != 1) return;
 	connected = true;
 	memset(&sendpacket,0,sizeof(NatNegPacket));
-	sendpacket.version = version;
 	sendpacket.packettype = NN_CONNECT;
 	sendpacket.cookie = cookie;
 	memcpy(sendpacket.magic, NNMagicData, NATNEG_MAGIC_LEN);

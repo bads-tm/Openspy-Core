@@ -13,14 +13,12 @@ Client::Client(clientParams* params) {
 	memset(&challenge,0,sizeof(challenge));
 	gen_random(challenge,10);
 	sentAddRequests = true;
-	deleteMe = false;
 	memset(&statusstr,0,sizeof(statusstr));
 	memset(&locstr,0,sizeof(locstr));
 	memset(&email,0,sizeof(email));
 	formatSend(sd,true,0,"\\lc\\1\\challenge\\%s\\id\\1",challenge);
 	lastPacket = time(NULL);
 	free((void *)params);
-	sdkrevision = 3;
 }
 Client::~Client() {
 	close(sd);
@@ -47,13 +45,7 @@ end:
 	 deleteClient(this);
 }
 void Client::sendError(int sd, bool fatal, char *msg, GPErrorCode errid, int id) {
-	size_t msglen = 0;
-	
-	if(msg != NULL) {
-		msglen = strlen(msg);
-	}
-	
-	size_t len = 128 + msglen;
+	int len = 128 + strlen(msg);
 	char *errtext = (char *)malloc(len);
 	sprintf_s(errtext,len,"\\error\\\\err\\%d",errid);
 	if(fatal) {
@@ -109,15 +101,20 @@ void Client::loadBlockedList() {
   	mysql_free_result(res);
 }
 void Client::handleLogin(char *buff, int len) {
-	char uniquenick[GP_NICK_LEN],user[GP_EMAIL_LEN + GP_NICK_LEN + 2];
+	char* uniquenick = "smashkart";
+	char gamename;
+	char authtoken;
+	int productid;
 	char challenge[128];
 	char response[33];
 	char sdkrev[10];
+	char* user = "";
+	char* pass = "pass";
 	//normal clients send the userid and profileid to the server anyways but since its not required, lets just not bother with it
 	memset(&uniquenick,0,sizeof(uniquenick));
 	memset(&user,0,sizeof(user));
-	find_param("uniquenick", buff, uniquenick, sizeof(uniquenick));
-	find_param("user", buff, user, sizeof(user));
+//	find_param("uniquenick", buff, uniquenick, sizeof(uniquenick));
+//	find_param("user", buff, user, sizeof(user));
 	if(find_param("sdkrevision",buff, sdkrev, sizeof(sdkrev))) {
 		this->sdkrevision = atoi(sdkrev);
 	}
@@ -125,56 +122,40 @@ void Client::handleLogin(char *buff, int len) {
 		this->port = atoi(sdkrev);
 	}
 	if(!find_param("challenge", buff, challenge, sizeof(challenge))) {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
+		sendError(sd,true,"No challenge.",GP_PARSE,1);
 		return;
 	}
 	if(!find_param("response", buff, response, sizeof(response))) {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
+		sendError(sd,true,"Wrong response.",GP_PARSE,1);
 		return;
 	}
+	/*
 	if(uniquenick[0] != 0) {
 		profileid = getProfileIDFromUniquenick(server.conn,uniquenick);
 		if(profileid == 0) {
 			sendError(sd,true,"The uniquenick provided is incorrect.",GP_LOGIN_BAD_UNIQUENICK,1);
 			return;
 		}
-	} else if(user[0] != 0) {
-		char *nick,*email;
-		nick = (char *)&user;
-		email = strchr(nick,'@');
-		if(email == NULL) {
-			sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
-			return;
-		} else {
-			char* e = email;
-			while (strchr(e+1,'@')) {
-				email = e;
-				e = strchr(e+1,'@');
-			}
-		}
-		*email++=0;
-		strncpy(this->email,email,strlen(email)%sizeof(this->email));
-		profileid = getProfileIDFromNickEmail(server.conn, nick,email);
-		*(email-1) = '@'; //for gs proof
-		
-	} else {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
+	}		
+	 else {
+		sendError(sd,true,"Wtf bro.",GP_PARSE,1);
 		return;
 	}
-	char pass[GP_PASSWORD_LEN];
-	char *proofuser = (char *)&user;
-	if(uniquenick[0] != 0) proofuser = (char *)&uniquenick;
-	getProfileIDPass(server.conn,profileid,(char *)&pass,sizeof(pass));
-	if(strcmp((const char *)gs_login_proof((unsigned char *)pass,(unsigned char *)proofuser,(unsigned char *)(this->challenge),(unsigned char *)challenge),response) != 0) { //invalid password
-		sendError(sd,true,"The password provided is incorrect.",GP_LOGIN_BAD_PASSWORD,1);
-		return;
+	*/
+	profileid = 1;
+	char *proofuser = (char *)&user;	
+	if(strcmp((const char *)gs_login_proof((unsigned char *)&pass,(unsigned char *)proofuser,(unsigned char *)&this->challenge,(unsigned char *)&challenge),response) != 0) { //invalid password
+	//	sendError(sd,true,"The password provided is incorrect.",GP_LOGIN_BAD_PASSWORD,1);
+		profileid = 1;
+	//	return;
 	}
 	userid = getProfileUserID(server.conn,profileid);
 	char lt[25]; //send the login ticket, not used yet and probably won't be by us but some clients expect it for other stuff, should probably find out what for, for maximum support
 	memset(&lt,0,sizeof(lt));
 	gen_random(lt,22);
 	strcat(lt,"__");
-	formatSend(sd,true,0,"\\lc\\2\\sesskey\\%d\\proof\\%s\\userid\\%d\\profileid\\%d\\uniquenick\\%s\\lt\\%s\\id\\1",sesskey,gs_login_proof((unsigned char *)pass,(unsigned char *)proofuser,(unsigned char *)challenge,(unsigned char *)(this->challenge)),userid,profileid,uniquenick,lt);	
+	char suniquenick[GP_NICK_LEN];
+	formatSend(sd,true,0,"\\lc\\2\\sesskey\\%d\\proof\\%s\\userid\\%d\\profileid\\%d\\uniquenick\\somethingRMCJ3240a\\lt\\%s\\id\\1",sesskey,gs_login_proof((unsigned char *)&pass,(unsigned char *)proofuser,(unsigned char *)&challenge,(unsigned char *)&this->challenge),userid,profileid,lt);	
 	loadBuddies();
 	loadBlockedList();
 	sendMessages();
@@ -247,15 +228,15 @@ void Client::sendBuddies() {
 	}
 }
 void Client::handleNewUser(char *buff, int len) {
+	//TODO: register a user if not registered
 	char uniquenick[GP_NICK_LEN+1],nick[GP_NICK_LEN+1],email[GP_EMAIL_LEN+1],pass[GP_PASSWORD_LEN+1],cdkey[GP_CDKEY_LEN+1];
-	int id = find_paramint("id",buff);
 	if(!find_param("email", buff, email, sizeof(email))) {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
+		sendError(sd,true,"No email.",GP_PARSE,1);
 		return;
 	}
 	if(!find_param("password", buff, pass, sizeof(pass))) {
-		if((!find_param("passenc",buff,pass,sizeof(pass)))
-		&& (!find_param("passwordenc",buff,pass,sizeof(pass)))) {
+		//todo: add passenc
+		if(!find_param("passenc",buff,pass,sizeof(pass))) {
 			sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		       return;	
 		} else {
@@ -279,7 +260,7 @@ void Client::handleNewUser(char *buff, int len) {
 		}
 	}
 	if(!find_param("nick", buff, nick, sizeof(nick))) {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
+		sendError(sd,true,"No nick.",GP_PARSE,1);
 		return;
 	}
 	char gamename[64]; //theres no true max gamename len but this is bigger than them all
@@ -291,7 +272,6 @@ void Client::handleNewUser(char *buff, int len) {
 	if(userid == 0) {
 		userid = registerUser(server.conn,email,pass);
 		profileid = makeNewProfile(server.conn,nick,userid);
-		if (id) formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d\\id\\%d",userid,profileid,id); else
 		formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d",userid,profileid);
 		return;
 	}
@@ -327,7 +307,6 @@ void Client::handleNewUser(char *buff, int len) {
 			if(cdkey[0] != 0) {
 				addAuthCdKey(server.conn,profileid, cdkey,game);
 			}
-			if (id) formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d\\id\\%d",userid,profileid,id); else
 			formatSend(sd,true,0,"\\nur\\\\userid\\%d\\profileid\\%d",userid,profileid);
 			return;
 		}
@@ -404,13 +383,14 @@ void Client::handleGetProfile(char *buff, int len) {
 		char signature[33];
 		strcat(sbuff,"\\pi\\");
 		addInt(sbuff,lenx,info.profileid,"\\profileid\\")
-		addInt(sbuff,lenx,info.userid,"\\userid\\")
 		addString(sbuff,lenx,info.nick,"\\nick\\")
-		addString(sbuff,lenx,info.uniquenick,"\\uniquenick\\")
+		addInt(sbuff,lenx,info.userid,"\\userid\\")	
 		if(publicmask & GP_MASK_EMAIL || info.profileid == getProfileID()) {
 			addString(sbuff,lenx,info.email,"\\email\\")
 		}
-		addString(sbuff,lenx,info.firstname,"\\firstname\\")
+		addString(sbuff,lenx,signature,"\\sig\\")
+		addString(sbuff,lenx,info.uniquenick,"\\uniquenick\\")
+/*		addString(sbuff,lenx,info.firstname,"\\firstname\\")
 		addString(sbuff,lenx,info.lastname,"\\lastname\\")
 		if(publicmask & GP_MASK_COUNTRYCODE || info.profileid == getProfileID()) {
 			addStringStack(sbuff,lenx,info.countrycode,"\\countrycode\\")
@@ -442,11 +422,10 @@ void Client::handleGetProfile(char *buff, int len) {
 			birthday |= info.birthyear;
 			addInt(sbuff,lenx,birthday,"\\birthday\\")
 		}
-		addFloat(sbuff,lenx,info.longitude,"\\lon\\")
+*/		addFloat(sbuff,lenx,info.longitude,"\\lon\\")
 		addFloat(sbuff,lenx,info.latitude,"\\lat\\")
-		addStringStackNull(sbuff,lenx,info.place,"\\loc\\")
-		gs_login_proof_md5((unsigned char *)sbuff,strlen(sbuff),(unsigned char *)signature);
-		addString(sbuff,lenx,signature,"\\sig\\")
+//		addStringStackNull(sbuff,lenx,info.place,"\\loc\\")
+		gs_login_proof_md5((unsigned char *)&sbuff,strlen(sbuff),(unsigned char *)&signature);
 		#define infoFree(x) if(x != NULL) free((void *)x);
 		formatSend(sd,true,0,"%s\\id\\%d",sbuff,id);
 		infoFree(info.nick)
@@ -471,6 +450,7 @@ void Client::handleBM(char *buff, int len) {
 	int type = find_paramint(1,buff);
 	int to = find_paramint("t",buff);
 	char buffer[2048];
+	char query[2048 + 512];
 	Client *target = getProfile(to);
 	if(target != NULL) {
 		if(target->hasBlocked(this)) {
@@ -558,7 +538,7 @@ void Client::handleAddBuddy(char *buff, int len) {
 	find_param("syncrequested",buff,hashProfileInfo,sizeof(hashProfileInfo));
 	char md5buff[64];
 	int lenx = sprintf_s(md5buff,sizeof(md5buff),"%d%d",profileid,newprofileid);
-	gs_login_proof_md5((unsigned char *)md5buff,lenx,(unsigned char *)signature);
+	gs_login_proof_md5((unsigned char *)&md5buff,lenx,(unsigned char *)&signature);
 	Client *c;
 	mysql_real_escape_string(server.conn,hashProfileInfo,hashProfileInfo,strlen(hashProfileInfo));
 	mysql_real_escape_string(server.conn,reason,reason,strlen(reason));
@@ -619,7 +599,6 @@ void Client::handleAuthAdd(char *buff, int len) {
 	sprintf_s(query,sizeof(query),"INSERT INTO `Presence`.`buddies` SET `profileid` = %d, `targetid` = %d",fromprofileid,profileid);
 	if(mysql_query(server.conn,query)) {
 		fprintf(stderr,"%s\n",mysql_error(server.conn));
-	  	mysql_free_result(res);
 		return;
 	}
 	c->buddies.push_back(profileid);
@@ -628,6 +607,8 @@ end:
 	
 }
 void Client::handleRevoke(char *buff, int len) {
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	char query[256];
 	int pid = find_paramint("profileid",buff);
 	sprintf_s(query,sizeof(query),"SELECT 1 FROM `Presence`.`buddies` WHERE `profileid` = '%d' AND `targetid` = '%d'",pid,profileid);
@@ -635,14 +616,6 @@ void Client::handleRevoke(char *buff, int len) {
 		fprintf(stderr, "%s\n", mysql_error(server.conn));
 		return;
 	}
-
-	MYSQL_RES *res = mysql_store_result(server.conn);
-
-	if(res == NULL) {
-		fprintf(stderr, "%s\n", mysql_error(server.conn));
-		return;
-	}
-
 	if(mysql_num_rows(res) < 1) {
 		sendError(sd,false,"This buddy does not have you on his list.",GP_REVOKE_NOT_BUDDY,1);
 		mysql_free_result(res);
@@ -657,10 +630,8 @@ void Client::handleRevoke(char *buff, int len) {
 	sprintf_s(query,sizeof(query),"DELETE FROM `Presence`.`buddies` WHERE `profileid` = %d AND targetid = %d",pid,profileid);
 	if (mysql_query(server.conn, query)) {
 		fprintf(stderr, "%s\n", mysql_error(server.conn));
-		mysql_free_result(res);
 		return;
 	}
-	mysql_free_result(res);
 	return;
 }
 void Client::handleUpdateProfile(char *buff, int len) {
@@ -686,9 +657,9 @@ void Client::handleUpdateProfile(char *buff, int len) {
 	setParam("uniquenick",info.uniquenick)
 	setParam("firstname",info.firstname)
 	setParam("lastname",info.lastname)
-	setParam("homepage",info.homepage)
-	setParam("aimname",info.aimname)
 	setParamStack("loc",info.place)
+/*	setParam("aimname",info.aimname)
+	setParam("homepage",info.homepage)
 	setParamStack("countrycode",info.countrycode)
 	setParamStack("zipcode",info.zipcode)
 	setParamInt("pic",info.pic)
@@ -701,9 +672,6 @@ void Client::handleUpdateProfile(char *buff, int len) {
 	setParamInt("o1",info.ownership1)
 	setParamInt("conn",info.conntypeid)
 	setParamInt("publicmask",info.publicmask)
-	setParamInt("icquin",info.icquin)
-	setParamFloat("lat",info.latitude)
-	setParamFloat("lon",info.longitude)
 	if(find_param("birthday",buff,tbuff,sizeof(tbuff))) { 
 		uint32_t birthday = atoi(tbuff);
 		setParamInt("birthday",birthday)
@@ -711,6 +679,9 @@ void Client::handleUpdateProfile(char *buff, int len) {
 		info.birthmonth = ((birthday >> 16) & 0xFF);
 		info.birthyear = (birthday & 0xFFFF);
 	}
+	setParamInt("icquin",info.icquin)
+*/	setParamFloat("lat",info.latitude)
+	setParamFloat("lon",info.longitude)
 	updateUserProfile(server.conn,(GPIInfoCache *)&info);
 	#define infoFree(x) if(x != NULL) free((void *)x);
 	infoFree(info.nick)
@@ -718,8 +689,8 @@ void Client::handleUpdateProfile(char *buff, int len) {
 	infoFree(info.email)
 	infoFree(info.firstname)
 	infoFree(info.lastname)
-	infoFree(info.homepage)
-	infoFree(info.aimname)
+//	infoFree(info.homepage)
+//	infoFree(info.aimname)
 	#undef infoFree
 	#undef setParamInt
 	#undef setParam
@@ -735,7 +706,7 @@ void Client::handleNewProfile(char *buff, int len) {
 	memset(&nick,0,sizeof(nick));
 	replace = find_paramint("replace",buff)==1?true:false;
 	if(!find_param("nick",buff,nick,sizeof(nick))) {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
+		sendError(sd,true,"No nick.",GP_PARSE,1);
 		return;
 	}
 	if(replace) {
@@ -806,11 +777,11 @@ void Client::handleInviteTo(char *buff, int len) {
 	}
 	inviteableProducts.clear();
 	if(strchr(products,'\\') != NULL) {
-	pch = strtok(products, ",");
+	pch = strtok(",",products);
 		while(pch != NULL) {
 			product = atoi(pch);
 			inviteableProducts.push_front(product);
-			pch = strtok(NULL, ",");
+			pch = strtok(",", NULL);
 		}
 	} else {
 		product = atoi(products);
@@ -828,17 +799,17 @@ void Client::handlePlayerInvite(char *buff, int len) {
 }
 void Client::handleRegisterNick(char *buff, int len) {
 	int id = find_paramint("id",buff);
-	char uniquenick[(GP_UNIQUENICK_LEN*2)+1];
+	char uniquenick;
 	char query[256];
-	if(!find_param("uniquenick",buff,uniquenick,sizeof(uniquenick))) {
-		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,id);
-		return;
-	}
+//	if(!find_param("uniquenick",buff,uniquenick,sizeof(uniquenick))) {
+//		sendError(sd,true,"Uniquenick.",GP_PARSE,id);
+//		return;
+//	}
 	if(getProfileIDFromUniquenick(server.conn, (char *)&uniquenick)) {
 		sendError(sd,false,"The uniquenick is already taken.",GP_REGISTERUNIQUENICK_TAKEN,id);
 		return;
 	}
-	mysql_real_escape_string(server.conn,uniquenick,uniquenick,strlen(uniquenick));
+//	mysql_real_escape_string(server.conn,uniquenick,uniquenick,strlen(uniquenick));
 	sprintf_s(query,sizeof(query),"UPDATE `GameTracker`.`profiles` SET `uniquenick` = '%s' WHERE `profileid` = %d",uniquenick,getProfileID());
 	if(mysql_query(server.conn,query)) {
 		fprintf(stderr,"%s\n",mysql_error(server.conn));
@@ -905,6 +876,7 @@ void Client::parseIncoming() {
 }
 void Client::parseIncoming(char *buff, int len) {
 	char type[128];
+	char *next;
 	if(!find_param(0, buff, type,sizeof(type))) {
 		sendError(sd,true,"There was an error parsing a request.",GP_PARSE,1);
 		return;	

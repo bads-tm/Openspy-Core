@@ -27,6 +27,7 @@ int getUserIDFromEmail(MYSQL *sql, char *email) {
 	userid = atoi(row[0]);
    }
    mysql_free_result(res);
+   end:
    free((void *)query);
    return userid;
 }
@@ -53,6 +54,7 @@ int getProfileUserID(MYSQL *sql, int profileid) {
 }
 bool tryPassword(MYSQL *sql, int userid, char *pass) {
 	MYSQL_RES *res;
+	MYSQL_ROW row;
 	bool found = false;
 	int len = 1024 + strlen(pass);
 	char *query = (char *)malloc(len);
@@ -71,6 +73,7 @@ bool tryPassword(MYSQL *sql, int userid, char *pass) {
 }
 bool tryPasswordMD5(MYSQL *sql, int userid, char *pass) {
 	MYSQL_RES *res;
+	MYSQL_ROW row;
 	bool found = false;
 	int len = 1024 + strlen(pass);
 	char *query = (char *)malloc(len);
@@ -107,8 +110,8 @@ int getProfileIDFromNickEmail(MYSQL *sql, char *nick, char *email) {
 	while ((row = mysql_fetch_row(res)) != NULL) {
 		profileid = atoi(row[0]);
 	}
-	end:
   	mysql_free_result(res);
+	end:
 	free((void *)query);	
 	return profileid;
 }
@@ -202,8 +205,8 @@ int getProfileIDFromUniquenick(MYSQL *sql, char *uniquenick) {
 	while ((row = mysql_fetch_row(res)) != NULL) {
 		profileid = atoi(row[0]);
 	}
-	end:
   	mysql_free_result(res);
+	end:
 	free((void *)query);	
 	return profileid;
 }

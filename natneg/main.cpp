@@ -9,54 +9,46 @@ void handleConnection(int sd, struct sockaddr_in *peer, int instance, char *buff
 	char *p = (char *)&send;
 	int blen = 0;
 	int slen = sizeof(sockaddr_in);
-	Client *user = find_user(peer,instance);
+	Client *user = find_user(peer,0);
 	if(user == NULL) { //unregistered user, create
 		user = new Client(sd,peer,instance);
-		server.client_list.insert(user);
+		server.client_list.push_back(user);
 	}
 	user->handleIncoming(buff,len);
-	if(user->deleteMe)
-		reallyDeleteClient(user);
 }
 void checkTimeouts() {
-	boost::unordered_set<Client *>::iterator iterator=server.client_list.begin();
-	boost::unordered_set<Client *>::iterator end=server.client_list.end();
+	std::list<Client *>::iterator iterator=server.client_list.begin();
 	Client *user;
-	time_t now = time(NULL);
-	time_t timotim = now-NN_PING_TIME;
-	time_t timofiv = now-5;
-	time_t timoded = now-NN_DEADBEAT_TIME;
-	while(iterator != end) {
+	while(iterator != server.client_list.end()) {
 		user=*iterator;
-		++iterator;
-		if((user->deleteMe)||(timotim > user->getLastPacket()))
-			reallyDeleteClient(user);
+		if(time(NULL)-NN_PING_TIME > user->getLastPacket()) {
+			deleteClient(user);
+			iterator = server.client_list.begin();
+			continue;
+		}
+		iterator++;
 	}
 	iterator=server.client_list.begin();
-	end=server.client_list.end();
-	while(iterator != end) {
+	while(iterator != server.client_list.end()) {
 		user = *iterator;
-		++iterator;
 		if(user->getConnected()) {
 			if(!user->getConnectedAck()) {
-				if(user->getSendConnectTime()) {
-					if(timofiv > user->getSendConnectTime()) {
-						user->trySendConnect(false);
-					}
+				if(time(NULL)-5 > user->getSendConnectTime()) {
+					user->trySendConnect(false);
 				}
 			}
 		}
+		iterator++;
 	}
 	iterator=server.client_list.begin();
-	end=server.client_list.end();
-	while(iterator != end) {
+	while(iterator != server.client_list.end()) {
 		user=*iterator;
-		++iterator;
-		if(timoded > user->getConnectTime()) {
+		if(time(NULL)-NN_DEADBEAT_TIME > user->getConnectTime()) {
 			if(!user->getConnected()) {
 				user->sendDeadBeatNotice();
 			}
 		}
+		iterator++;
 	}
 }
 int getnfds(fd_set *rset, int *sockets, int num_instances) {
@@ -96,8 +88,6 @@ void *openspy_mod_run(modLoadOptions *options)
   for(int i=0;i<num_instances;i++) {
 	if((sockets[i] = socket(AF_INET,SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		servoptions.logMessageProc(moduleInfo.name,LOGLEVEL_ERROR,"Error creating socket for instance %d\n",i+1);
-		free((void *)sockets);
-		free((void *)si_me);
 		return NULL;
 	}
 	si_me[i].sin_family = AF_INET;
@@ -105,8 +95,6 @@ void *openspy_mod_run(modLoadOptions *options)
 	si_me[i].sin_addr.s_addr = getIP(i);
 	if(bind(sockets[i],(struct sockaddr *)&si_me[i],sizeof(struct sockaddr)) == -1) {
 		servoptions.logMessageProc(moduleInfo.name,LOGLEVEL_ERROR,"Error binding address for socket instance %d\n",i+1);
-		free((void *)sockets);
-		free((void *)si_me);
 		return NULL;
 	}
   }

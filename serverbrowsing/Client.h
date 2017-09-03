@@ -23,7 +23,6 @@ public:
 	uint8_t *getFilter();
 	void pushServer(serverList slist);
 	void delServer(serverList slist);
-	bool deleteMe;
 private:
 	int handleListRequest(uint8_t *buff, uint32_t len);
 	int handleInfoRequest(uint8_t *buff, uint32_t len);
@@ -31,7 +30,7 @@ private:
 	void sendGroups();
 	void sendIP();
 	void handleData(uint8_t *buff, uint32_t len);
-	void addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row, unsigned long* lengths);
+	void addGroupBuff(char **buff,int *len, char *fieldList, MYSQL_ROW row);
 	void sendServers();
 	char *findServerValue(char *name,serverList list);
 	void addServerBuff(char **buff,int *len, serverList slist);

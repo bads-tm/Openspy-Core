@@ -90,7 +90,7 @@ bool Client::cmd_user(char *params) {
 	 return false;
  }
  bool Client::cmd_setrights(char *params) {
-	char *p;
+	char *p,*target;
 	Client *targetuser;
 	if(params==NULL) {
 		goto notenoughparams;
@@ -128,7 +128,7 @@ bool Client::cmd_user(char *params) {
 	 return false;
  }
 bool Client::cmd_listopers(char *params) {
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *c;
 	while(iterator != server.client_list.end()) {
@@ -142,7 +142,7 @@ bool Client::cmd_listopers(char *params) {
 	 return true;
  }
 bool Client::cmd_listusers(char *params) {
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *c;
 	while(iterator != server.client_list.end()) {
@@ -227,6 +227,7 @@ bool Client::cmd_who(char *params) {
 	char *p;
 	Channel *targetchan;
 	Client *targetuser;
+	bool seeip;
 	std::list<chanClient *> chanList;
 	std::list<chanClient *>::iterator it;
 	char statbuff[12];
@@ -389,7 +390,7 @@ bool Client::joinChan(char *name, chanClient *userInfo, char *key) { //specific 
 			userInfo->owner = true;
 			userInfo->halfop = true;
 			userInfo->op = true;
-			char modestr[256] = { 0 };
+			char modestr[256];
 			sprintf(modestr,"\\hostmask\\%s\\modeflags\\O\\isGlobal\\0\\comment\\Rogue Channel Creator",host);
 			addUserMode(NULL,name,modestr,true);
 		}
@@ -402,9 +403,13 @@ bool Client::joinChan(char *name, chanClient *userInfo, char *key) { //specific 
 			userInfo->owner = true;
 			userInfo->halfop = true;
 			userInfo->op = true;
-			char modestr[256] = { 0 };
+			char modestr[256];
 			sprintf(modestr,"\\hostmask\\%s\\modeflags\\o\\isGlobal\\0\\comment\\AllOps Channel",host);
 			addUserMode(NULL,name,modestr,true);
+	}
+	if(chan == NULL) {
+		send_numeric(473,"%s :Cannot join channel (Failed to allocate channel)",name);
+		return false;
 	}
 	if(chan->inviteonly) {
 		if(userInfo->invited != true && userInfo->op != true && userInfo->owner != true) {
@@ -909,6 +914,8 @@ end:
 	 return false;
 }
 bool Client::cmd_setusermode(char *params) {
+	char data[128];
+	Channel *chan;
 	char *setstr;
 	if(params == NULL) goto notenoughparams;
 	setstr = strchr(params,' ');
@@ -1105,7 +1112,7 @@ bool Client::cmd_delchanprops(char *params) {
 	 return false;
 }
 bool Client::cmd_kill(char *params) {
-	char setstr[128] = { 0 };
+	char setstr[128];
 	char *nullchar = "\0";
 	char *reason;
 	char *host;
@@ -1139,7 +1146,6 @@ bool Client::cmd_kill(char *params) {
 }
 bool Client::cmd_kline(char *params) {
 	char *host;
-	char setstr[128] = { 0 };
 	if(params == NULL) goto notenoughparams;
 	host = strchr(params,' ');
 	if(host != NULL) {
@@ -1147,9 +1153,8 @@ bool Client::cmd_kline(char *params) {
 		if(*host == ':') {
 			host++;
 		}
-	} else {
-		goto notenoughparams;
 	}
+	char setstr[128];
 	sprintf(setstr,"\\hostmask\\%s\\modeflags\\b\\comment\\Killed\\expiressec\\600",host);
 	addUserMode(this,"X",setstr,true);
 	return true;
@@ -1158,6 +1163,8 @@ bool Client::cmd_kline(char *params) {
 	return false;
 }
 bool Client::cmd_setchanprops(char *params) {
+	char data[128];
+	Channel *chan;
 	char *setstr;
 	if(params == NULL) goto notenoughparams;
 	setstr = strchr(params,' ');
@@ -1277,7 +1284,6 @@ bool Client::cmd_listchans(char *params) {
 bool Client::cmd_whowas(char *params) {
 	int i=0;
 	std::list<whowasInfo *>::iterator iterator = server.whowas_list.begin();
-	if(params == NULL) goto notenoughparams;
 	whowasInfo *info;
 	char timestr[64];
 	while(iterator != server.whowas_list.end()) {
@@ -1500,7 +1506,6 @@ bool Client::cmd_getckey(char *params) {
 	chan = find_chan(params);
 	if(chan == NULL) {
 		//peerchat doesn't give an error for this so we don't either
-		free((void *)querycp);
 		return false;
 	}
 	client = NULL;
@@ -1510,13 +1515,11 @@ bool Client::cmd_getckey(char *params) {
 		if(targetuser == NULL) {
 			//s 401 Shinto Shinto :No such nick/channel
 			send_numeric(401,"%s :No such nick/channel",target);
-			free((void *)querycp);
 			return false;
 		}
 		client = chan->getUserInfo(targetuser);
 		if(client == NULL || (client->invisible && client->client->getRights() & OPERPRIVS_INVISIBLE && ~getRights() & OPERPRIVS_INVISIBLE)) {
 			send_numeric(401,"%s :No such nick/channel",target);
-			free((void *)querycp);
 			return false;
 		}
 	}
@@ -1570,9 +1573,6 @@ bool Client::cmd_getckey(char *params) {
 		it++;
 		}
 	}
-
-	free((void *)querycp);
-
 	if(numsent > 0)
 		send_numeric(703,"%s %s :End of GETCKEY",chan->getName(),cookie);
 	return true;
@@ -1683,6 +1683,7 @@ bool Client::cmd_kick(char *params) {
 			return false;
 		}
 	}
+	char kickmsg[256];
 	if(reason == NULL) {
 		chan->sendMessage(userprivs->invisible,false,this,"KICK %s %s",chan->getName(),target->nick);
 	} else {
@@ -1695,6 +1696,8 @@ bool Client::cmd_kick(char *params) {
 	return false;
 }
 bool Client::cmd_oper(char *params) {
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	char *email,*pass,*sendnoticetxt;
 	char *query;
 	int len;
@@ -1735,11 +1738,13 @@ bool Client::cmd_oper(char *params) {
 }
 bool Client::cmd_login(char *params) {
 //LOGIN 1 * c8837b23ff8aaa8a2dde915473ce0991 :CHCNiZ@chcniz@gmail.com
+	MYSQL_RES *res;
+	MYSQL_ROW row;
 	int type;
 	char *name,*pass,*loginstr;
 	char *query = NULL;
 	int len;
-	char *email;
+	char *email,*uniquenick;
 	if(params == NULL) goto notenoughparams;
 	name = strchr(params, ' ');//idk what the parameter is for
 	if(name == NULL) goto notenoughparams;
@@ -1849,7 +1854,7 @@ bool Client::cmd_away(char *params) {
 	return true;
 }
 bool Client::cmd_lusers(char *params) {
-	boost::unordered_set<Client *>::iterator iterator;
+	std::list<Client *>::iterator iterator;
 	iterator=server.client_list.begin();
 	Client *c;
 	int numopers = 0,numusers = 0;
@@ -1891,7 +1896,6 @@ Client::Client(clientParams *params) {
 	weight = 0;
 	connected=time(NULL);
 	encryted = false;
-	deleteMe = false;
 	last_reply=connected+(PINGTIME*4);
 	free((void *)params);
  }
@@ -2254,7 +2258,6 @@ bool Client::addUserParam(customKey* key) {
 	if(curkey != NULL) {
 		if(key->value[0] == 0) {
 			userKeys.remove(curkey);
-			free(curkey);
 			return false;
 		}
 		strcpy(curkey->value,key->value);

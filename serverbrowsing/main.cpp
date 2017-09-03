@@ -1,5 +1,4 @@
 #include "main.h"
-#include "server.h"
 #include "Client.h"
 #include <qr/structs.h>
 #include "structs.h"
@@ -10,33 +9,28 @@ serverInfo server;
 bool do_db_check();
 int getnfds(fd_set *rset) {
 	int hsock = 0;
-	boost::shared_ptr<Client> c;
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	while(iterator != end) {
+	Client *c;
+	std::list<Client *>::iterator iterator=server.client_list.begin();
+	while(iterator != server.client_list.end()) {
 		c=*iterator;
-		++iterator;
-		if(!c) continue;
 		int sock = c->getSocket();
 		if(sock > hsock) hsock = sock;
 		FD_SET(sock,rset);
+		iterator++;
 	}
 	return hsock;
 }
+void checkPing(Client *c) {
+}
 void processClients(fd_set *rset) {
-	boost::shared_ptr<Client> c;
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	time_t timotim = time(NULL)-SB_TIMEOUT_TIME;
-	while(iterator != end) {
+	Client *c;
+	std::list <Client *> clist = server.client_list;
+	std::list<Client *>::iterator iterator=clist.begin();
+	while(iterator != clist.end()) {
 		c=*iterator;
-		if(!c) { ++iterator; continue; }
-		if(timotim > c->getLastPing())
-			shutdown(c->getSocket(),SHUT_RDWR);
+		checkPing(c);
 		c->processConnection(rset);
-		if(c->deleteMe)
-			iterator->reset();
-		++iterator;
+		iterator++;
 	}
 }
 void *openspy_mod_run(modLoadOptions *options)
@@ -94,55 +88,47 @@ void *openspy_mod_run(modLoadOptions *options)
 		close(sd);
 		continue;
 	}
-	boost::shared_ptr<Client> c = boost::make_shared<Client>(sda,user);
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
-	for(;;) {
-		if(iterator == end) { server.client_list.push_back(c); break; }
-		else if(!*iterator) { *iterator = c; break; }
-		else ++iterator;
-	}
+	Client *c = new Client(sda,user);
+	server.client_list.push_front(c);
 	//handleConnection(sda,&peer);
     }
 }
 void pushServer(sbPushMsg *msg) {
-	boost::shared_ptr<Client> c;
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
+	Client *c;
+	std::list <Client *> clist = server.client_list;
+	std::list<Client *>::iterator iterator=clist.begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
-	while(iterator != end) {
+	while(iterator != clist.end()) {
 		c=*iterator;
-		++iterator;
-		if(!c) continue;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
 				c->pushServer(slist);
 			}
 		}
+		iterator++;
 	}
 }
 void deleteServer(sbPushMsg *msg) {
-	boost::shared_ptr<Client> c;
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator iterator=server.client_list.begin();
-	boost::container::stable_vector< boost::shared_ptr<Client> >::iterator end=server.client_list.end();
+	Client *c;
+	std::list <Client *> clist = server.client_list;
+	std::list<Client *>::iterator iterator=clist.begin();
 	serverList slist;
 	slist.country = msg->country;
 	slist.ipaddr = msg->ipaddr;
 	slist.port = msg->port;
 	slist.serverKeys = msg->keys;
-	while(iterator != end) {
+	while(iterator != clist.end()) {
 		c=*iterator;
-		++iterator;
-		if(!c) continue;
 		if(c->wantsUpdates()) {
 			if(msg->game == c->getQueryGame()) {
 				c->delServer(slist);
 			}
 		}
+		iterator++;
 	}
 }
 bool openspy_mod_query(char *sendmodule, void *data,int len) {

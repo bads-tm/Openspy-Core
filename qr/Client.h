@@ -33,10 +33,6 @@ class Client {
 		void sendMsg(void *data, int len);
 		bool isServerRegistered();
 		countryRegion *getCountry();
-		bool deleteMe;
-		void lockKeys();
-		bool tryLockKeys();
-		void unlockKeys();
 	private:
 		void handleServerData(char *buff, int len);
 		void handleAvailable(char *buff, int len);
@@ -53,14 +49,12 @@ class Client {
 		customKey *findKey(char *name);
 		time_t connecttime;
 		time_t lastPing;
-		time_t statSent;
 		uint8_t instancekey[REQUEST_KEY_LEN]; //used by gamespy to prevent UDP packet spoofing
 		char challenge[CHALLENGE_LEN + 1];
 		int sd;
 		bool sentChallenge;
 		bool hasInstanceKey;
 		bool serverRegistered;
-		pthread_mutex_t lockedKeys;
 		bool legacyQuery;
 		countryRegion *country;
 		gameInfo *game;

@@ -16,7 +16,6 @@ public:
 	int getProfileID();
 	int getUserID();
 	time_t getLastPacket();
-	bool deleteMe;
 private:
 	void parseIncoming();
 	void parseIncoming(char *buff, int len);

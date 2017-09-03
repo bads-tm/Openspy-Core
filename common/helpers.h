@@ -52,5 +52,5 @@ bool charValid(char ch);
 void makeValid(char *name);
 bool nameValid(char *name, bool peerchat);
 int countchar(char *str, char ch);
-size_t makeStringSafe(char *buff, int len);
+int makeStringSafe(char *buff, int len);
 #endif

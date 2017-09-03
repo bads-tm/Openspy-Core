@@ -2,9 +2,7 @@
 #define _SERVER_INC
 #include "main.h"
 #include "structs.h"
-#include <sstream>
 void deleteClient(Client *client);
-void reallyDeleteClient(Client *client);
 void deleteChannel(Channel *client);
 void sendToAll(char *str, ...);
 void sendWallops(Client *sender,char *msg);
@@ -26,7 +24,7 @@ void applyUserMode(userMode *usermode);
 bool usermodeMatches(Client *user, userMode *usermode);
 void sendUserMode(Client *user,userMode *um);
 void applyUserMode(userMode *usermode, Client *user);
-void getModeStr(userMode *um, std::string& dst);
+void getModeStr(userMode *um, char *dst);
 void applyUserModes(Client *user);
 void applyUserMode(userMode *usermode, Client *user);
 bool isGlobalExcempt(Client *user);
